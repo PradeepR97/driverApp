@@ -1,10 +1,12 @@
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { setStoredLanguageCode } from '@/lib/language-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+    Animated,
+    Easing,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -27,16 +29,40 @@ export default function LanguageScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState(0);
+  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const heroScale = useRef(new Animated.Value(0.92)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(heroOpacity, {
+        toValue: 1,
+        duration: 520,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(heroScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [heroOpacity, heroScale]);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + Spacing.xl }]}>
-      <View style={styles.hero}>
+      <Animated.View
+        style={[
+          styles.hero,
+          { opacity: heroOpacity, transform: [{ scale: heroScale }] },
+        ]}
+      >
         <View style={styles.globeWrap}>
           <Ionicons name="globe-outline" size={36} color="#fff" />
         </View>
         <Text style={styles.title}>Partner Onboarding</Text>
         <Text style={styles.subtitle}>Select your preferred language</Text>
-      </View>
+      </Animated.View>
 
       <ScrollView
         contentContainerStyle={styles.grid}
@@ -49,7 +75,11 @@ export default function LanguageScreen() {
             <Pressable
               key={`${lang.code}-${lang.en}`}
               onPress={() => setSelected(index)}
-              style={[styles.card, active && styles.cardActive]}
+              style={({ pressed }) => [
+                styles.card,
+                active && styles.cardActive,
+                pressed && styles.cardPressed,
+              ]}
             >
               <Text style={styles.cardCode}>{lang.code}</Text>
               <Text style={styles.cardEn}>{lang.en}</Text>
@@ -85,16 +115,15 @@ const styles = StyleSheet.create({
   globeWrap: {
     width: 72,
     height: 72,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.accentMint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
+    ...Shadows.floatSm,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.text,
+    ...Type.h1,
     textAlign: 'center',
   },
   subtitle: {
@@ -102,6 +131,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 22,
   },
   grid: {
     flexDirection: 'row',
@@ -114,14 +144,16 @@ const styles = StyleSheet.create({
     width: '47%',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    backgroundColor: Colors.background,
+    borderRadius: Radius.xl,
+    padding: Spacing.md + 2,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   cardActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primarySoft,
   },
+  cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.96 },
   cardCode: { fontSize: 12, fontWeight: '700', color: Colors.text },
   cardEn: { fontSize: 16, fontWeight: '700', color: Colors.text, marginTop: 4 },
   cardNative: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },

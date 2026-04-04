@@ -39,6 +39,9 @@ yarn-error.*
 
 app-example
 
+# Local docx extract (reference only)
+.ref_docx/
+
 # generated native folders
 /ios
 /android

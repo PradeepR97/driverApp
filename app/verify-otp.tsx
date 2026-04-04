@@ -1,5 +1,5 @@
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import {
     formatPhoneForDisplay,
     normalizePhoneDigits,
@@ -18,6 +18,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    Animated,
+    Easing,
     Pressable,
     StyleSheet,
     Text,
@@ -52,8 +54,21 @@ export default function VerifyOtpScreen() {
   });
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
+  const [focusedOtp, setFocusedOtp] = useState<number | null>(0);
   const inputs = useRef<Array<TextInput | null>>([]);
   const verifyAttempted = useRef<string | null>(null);
+  const otpShakeX = useRef(new Animated.Value(0)).current;
+
+  const runOtpShake = () => {
+    otpShakeX.setValue(0);
+    Animated.sequence([
+      Animated.timing(otpShakeX, { toValue: 10, duration: 42, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(otpShakeX, { toValue: -10, duration: 42, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(otpShakeX, { toValue: 8, duration: 42, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(otpShakeX, { toValue: -8, duration: 42, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(otpShakeX, { toValue: 0, duration: 42, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  };
 
   useEffect(() => {
     if (phone10.length !== 10) {
@@ -83,6 +98,7 @@ export default function VerifyOtpScreen() {
           verifyAttempted.current = null;
           setValues(Array.from({ length: OTP_DIGIT_COUNT }, () => ''));
           inputs.current[0]?.focus();
+          runOtpShake();
           Alert.alert(
             'Sign-in incomplete',
             'No session token was returned. Check the API response shape or try again.',
@@ -113,6 +129,7 @@ export default function VerifyOtpScreen() {
         verifyAttempted.current = null;
         setValues(Array.from({ length: OTP_DIGIT_COUNT }, () => ''));
         inputs.current[0]?.focus();
+        runOtpShake();
         Alert.alert('Verification failed', e instanceof Error ? e.message : 'Please try again.');
       } finally {
         setBusy(false);
@@ -186,27 +203,34 @@ export default function VerifyOtpScreen() {
         <View style={styles.phoneRow}>
           <Text style={styles.phone}>{displayPhone}</Text>
           <Pressable onPress={() => router.back()} disabled={busy}>
-            <Text style={styles.change}> Change</Text>
+            <Text style={styles.change}>Change</Text>
           </Pressable>
         </View>
 
-        <View style={styles.otpRow}>
-          {values.map((v, i) => (
-            <TextInput
-              key={i}
-              ref={(r) => {
-                inputs.current[i] = r;
-              }}
-              style={[styles.otpBox, v ? styles.otpBoxFilled : null]}
-              keyboardType="number-pad"
-              maxLength={1}
-              value={v}
-              editable={!busy}
-              onChangeText={(t) => setDigit(i, t)}
-              onKeyPress={({ nativeEvent }) => onKeyPress(i, nativeEvent.key)}
-            />
-          ))}
-        </View>
+        <Animated.View style={{ transform: [{ translateX: otpShakeX }] }}>
+          <View style={styles.otpRow}>
+            {values.map((v, i) => (
+              <TextInput
+                key={i}
+                ref={(r) => {
+                  inputs.current[i] = r;
+                }}
+                style={[
+                  styles.otpBox,
+                  v ? styles.otpBoxFilled : null,
+                  focusedOtp === i ? styles.otpBoxFocus : null,
+                ]}
+                keyboardType="number-pad"
+                maxLength={1}
+                value={v}
+                editable={!busy}
+                onChangeText={(t) => setDigit(i, t)}
+                onKeyPress={({ nativeEvent }) => onKeyPress(i, nativeEvent.key)}
+                onFocus={() => setFocusedOtp(i)}
+              />
+            ))}
+          </View>
+        </Animated.View>
 
         {busy ? (
           <Text style={styles.status}>Verifying…</Text>
@@ -243,17 +267,18 @@ const styles = StyleSheet.create({
   shieldWrap: {
     width: 72,
     height: 72,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,
+    ...Shadows.floatSm,
   },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.text },
+  title: { ...Type.h1 },
   sub: { marginTop: Spacing.md, fontSize: 15, color: Colors.textSecondary },
   phoneRow: { flexDirection: 'row', marginTop: Spacing.xs, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' },
   phone: { fontSize: 16, fontWeight: '700', color: Colors.text },
-  change: { fontSize: 16, fontWeight: '600', color: Colors.primary },
+  change: { fontSize: 16, fontWeight: '700', color: Colors.link, marginLeft: 4 },
   otpRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -264,15 +289,21 @@ const styles = StyleSheet.create({
   otpBox: {
     width: OTP_BOX,
     height: OTP_BOX,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
     borderColor: Colors.border,
     textAlign: 'center',
     fontSize: OTP_DIGIT_COUNT > 6 ? 18 : 22,
     fontWeight: '700',
     color: Colors.text,
+    backgroundColor: Colors.surfaceElevated,
   },
   otpBoxFilled: { borderColor: Colors.primary },
+  otpBoxFocus: {
+    borderColor: Colors.link,
+    ...Shadows.floatSm,
+    shadowOpacity: 0.12,
+  },
   resend: { marginTop: Spacing.xl, fontSize: 14, color: Colors.textSecondary },
   timer: { fontWeight: '800', color: Colors.text },
   status: { marginTop: Spacing.xl, fontSize: 14, color: Colors.textSecondary },

@@ -1,4 +1,4 @@
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -71,6 +71,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,
+    ...Shadows.floatMd,
   },
   badge: {
     position: 'absolute',
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.text, textAlign: 'center' },
+  title: { ...Type.h1, textAlign: 'center' },
   sub: {
     marginTop: Spacing.md,
     fontSize: 15,
@@ -97,8 +98,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xl,
     padding: Spacing.lg,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatMd,
   },
   cardTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: Spacing.md },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, marginBottom: Spacing.md },

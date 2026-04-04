@@ -1,8 +1,9 @@
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Tab = 'today' | 'week' | 'month';
@@ -69,8 +70,12 @@ export default function TripHistoryScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator>
-        {TRIPS.map((trip) => (
-          <Pressable key={trip.id} style={styles.card}>
+        {TRIPS.map((trip, index) => (
+          <Animated.View
+            key={trip.id}
+            entering={FadeInDown.delay(64 * index).duration(300)}
+          >
+            <Pressable style={styles.card}>
             <View style={styles.cardTop}>
               <View style={styles.dateRow}>
                 <Ionicons name="calendar-outline" size={16} color={Colors.textSecondary} />
@@ -109,6 +114,7 @@ export default function TripHistoryScreen() {
               </View>
             </View>
           </Pressable>
+          </Animated.View>
         ))}
       </ScrollView>
     </View>
@@ -124,7 +130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  headerTitle: { ...Type.h2 },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.border },
   tabs: {
     flexDirection: 'row',
@@ -145,9 +151,10 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    backgroundColor: Colors.background,
+    borderRadius: Radius.xl,
+    padding: Spacing.md + 2,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

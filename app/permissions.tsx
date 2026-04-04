@@ -1,5 +1,5 @@
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { requestNotificationPermissionIfAvailable } from '@/lib/request-notification-permission';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -39,19 +39,19 @@ export default function PermissionsScreen() {
         <Text style={styles.subtitle}>We need a few permissions to provide you with the best experience</Text>
 
         <PermissionCard
-          icon={<Ionicons name="location" size={22} color={Colors.primary} />}
+          icon={<Ionicons name="location-outline" size={22} color={Colors.primaryDark} />}
           iconBg={Colors.primarySoft}
           title="Location Access"
           description="Required for live tracking and navigation to pickup/drop locations"
         />
         <PermissionCard
-          icon={<Ionicons name="notifications" size={22} color={Colors.orange} />}
+          icon={<Ionicons name="notifications-outline" size={22} color={Colors.orange} />}
           iconBg="#FFEDD5"
           title="Push Notifications"
           description="Get instant alerts for new orders and important updates"
         />
         <PermissionCard
-          icon={<Ionicons name="camera" size={22} color="#2563EB" />}
+          icon={<Ionicons name="camera-outline" size={22} color="#2563EB" />}
           iconBg="#DBEAFE"
           title="Camera Access"
           description="Scan documents and capture proof of delivery"
@@ -82,7 +82,7 @@ function PermissionCard({
 }) {
   return (
     <View style={styles.card}>
-      <View style={[styles.iconSquare, { backgroundColor: iconBg }]}>{icon}</View>
+      <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>{icon}</View>
       <View style={{ flex: 1 }}>
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={styles.cardDesc}>{description}</Text>
@@ -98,14 +98,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: 64,
     height: 64,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
+    ...Shadows.floatSm,
   },
   lockEmoji: { fontSize: 32 },
-  title: { fontSize: 24, fontWeight: '800', color: Colors.text, textAlign: 'center' },
+  title: { ...Type.h1, fontSize: 24, textAlign: 'center' },
   subtitle: {
     marginTop: Spacing.sm,
     fontSize: 15,
@@ -119,15 +120,17 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.xl,
+    padding: Spacing.md + 2,
     marginBottom: Spacing.md,
     alignItems: 'center',
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
-  iconSquare: {
+  iconCircle: {
     width: 48,
     height: 48,
-    borderRadius: Radius.sm,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },

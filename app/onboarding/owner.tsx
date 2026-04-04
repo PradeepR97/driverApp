@@ -1,7 +1,7 @@
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { OnboardingStepper } from '@/components/OnboardingStepper';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { postOnboardingOwner } from '@/lib/api/onboarding';
 import { uploadLocalImageToS3 } from '@/lib/api/upload';
 import { Ionicons } from '@expo/vector-icons';
@@ -216,7 +216,7 @@ function UploadRow({
         <>
           <Text style={styles.uploadTitle}>{label}</Text>
           <Pressable style={styles.uploadBtn} onPress={onUpload} disabled={disabled}>
-            <Ionicons name="camera" size={18} color={Colors.primary} />
+            <Ionicons name="camera" size={18} color={Colors.link} />
             <Text style={styles.uploadBtnText}>Upload</Text>
           </Pressable>
         </>
@@ -234,21 +234,24 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
-    minHeight: 50,
+    minHeight: 52,
     fontSize: 16,
     color: Colors.text,
+    backgroundColor: Colors.surfaceElevated,
   },
   uploadCard: {
     marginTop: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   uploadDone: {
     borderColor: Colors.primary,
@@ -265,7 +268,7 @@ const styles = StyleSheet.create({
   uploadTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
   fileName: { fontSize: 12, color: Colors.primary, marginTop: 2 },
   uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  uploadBtnText: { color: Colors.primary, fontWeight: '700' },
+  uploadBtnText: { color: Colors.link, fontWeight: '700' },
   footer: {
     padding: Spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -1,5 +1,5 @@
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { normalizePhoneDigits, postOtpRequest } from '@/lib/api/auth';
 import { AUTH_USER_TYPE, DEFAULT_COUNTRY_CODE } from '@/lib/config';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,6 +61,7 @@ export default function LoginScreen() {
       >
         <Ionicons name="chevron-back" size={26} color={Colors.text} />
       </Pressable>
+      <View style={styles.hairline} />
 
       <View style={styles.hero}>
         <View style={styles.phoneWrap}>
@@ -111,18 +112,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.lg,
   },
-  back: { alignSelf: 'flex-start', marginBottom: Spacing.md },
-  hero: { alignItems: 'center', marginTop: Spacing.lg },
+  back: { alignSelf: 'flex-start', marginBottom: Spacing.sm },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginBottom: Spacing.md,
+  },
+  hero: { alignItems: 'center', marginTop: Spacing.sm },
   phoneWrap: {
     width: 72,
     height: 72,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,
+    ...Shadows.floatSm,
   },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.text },
+  title: { ...Type.h1, textAlign: 'center' },
   subtitle: {
     marginTop: Spacing.sm,
     fontSize: 15,
@@ -147,6 +154,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.md,
     minHeight: 52,
+    backgroundColor: Colors.surface,
   },
   ccText: { fontWeight: '600', color: Colors.text },
   input: {
@@ -158,6 +166,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: Colors.text,
     minHeight: 52,
+    backgroundColor: Colors.surfaceElevated,
   },
   bottom: { gap: Spacing.md },
   legal: {
@@ -166,6 +175,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  link: { color: Colors.primary, textDecorationLine: 'underline' },
+  link: { color: Colors.link, textDecorationLine: 'underline', fontWeight: '600' },
   help: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
 });

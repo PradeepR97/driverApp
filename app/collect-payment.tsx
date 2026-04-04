@@ -1,5 +1,5 @@
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { useDriverStore } from '@/lib/driver-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -148,9 +148,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   header: {
     textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.text,
+    ...Type.h2,
     paddingVertical: Spacing.md,
   },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.border },
@@ -167,9 +165,11 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     marginBottom: Spacing.lg,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: Colors.text },
@@ -190,9 +190,11 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     marginBottom: Spacing.md,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   payIcon: {
     width: 48,
@@ -222,14 +224,15 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: Colors.overlay,
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
+    backgroundColor: Colors.surfaceElevated,
+    borderTopLeftRadius: Radius.xxl,
+    borderTopRightRadius: Radius.xxl,
     padding: Spacing.lg,
+    ...Shadows.sheetTop,
   },
   modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   modalBody: { marginTop: Spacing.md, fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },

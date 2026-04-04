@@ -1,10 +1,11 @@
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
 import { useDriverStore } from '@/lib/driver-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAGS = [
@@ -45,13 +46,18 @@ export default function RatingScreen() {
 
         <View style={styles.stars}>
           {[1, 2, 3, 4, 5].map((i) => (
-            <Pressable key={i} onPress={() => setStars(i)} hitSlop={8}>
-              <Ionicons
-                name={i <= stars ? 'star' : 'star-outline'}
-                size={36}
-                color={i <= stars ? Colors.star : Colors.border}
-              />
-            </Pressable>
+            <Animated.View
+              key={i}
+              entering={FadeInDown.delay(48 * (i - 1)).duration(280)}
+            >
+              <Pressable onPress={() => setStars(i)} hitSlop={8}>
+                <Ionicons
+                  name={i <= stars ? 'star' : 'star-outline'}
+                  size={36}
+                  color={i <= stars ? Colors.star : Colors.border}
+                />
+              </Pressable>
+            </Animated.View>
           ))}
         </View>
 
@@ -86,8 +92,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,
+    ...Shadows.floatSm,
   },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.text, textAlign: 'center' },
+  title: { ...Type.h1, textAlign: 'center' },
   sub: {
     marginTop: Spacing.sm,
     fontSize: 15,
@@ -99,8 +106,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: Spacing.xl,
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#64748B',
     marginBottom: Spacing.sm,
+    fontWeight: '600',
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
   chip: {

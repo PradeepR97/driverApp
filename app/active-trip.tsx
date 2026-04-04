@@ -1,6 +1,6 @@
 import { MapGridBackground } from '@/components/MapGridBackground';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import {
   postArrivedAtDrop,
   postArrivedAtPickup,
@@ -387,7 +387,7 @@ export default function ActiveTripScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.surface },
+  screen: { flex: 1, backgroundColor: Colors.background },
   sos: {
     position: 'absolute',
     left: Spacing.md,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 3,
-    elevation: 4,
+    ...Shadows.floatSm,
   },
   more: {
     position: 'absolute',
@@ -406,22 +406,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 3,
-    elevation: 4,
+    ...Shadows.floatSm,
   },
   cancelPill: {
     position: 'absolute',
     right: Spacing.md,
     zIndex: 2,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surfaceElevated,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.danger,
+    ...Shadows.floatSm,
   },
   cancelPillText: { color: Colors.danger, fontWeight: '700', fontSize: 13 },
   floatBanner: {
@@ -429,19 +430,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     left: Spacing.lg,
     right: Spacing.lg,
-    backgroundColor: '#fff',
-    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     zIndex: 2,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    ...Shadows.floatMd,
   },
   floatBannerText: { flex: 1, fontWeight: '800', color: Colors.text, fontSize: 15 },
   waitBadge: {
@@ -481,16 +478,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
+    backgroundColor: Colors.surfaceElevated,
+    borderTopLeftRadius: Radius.xxl,
+    borderTopRightRadius: Radius.xxl,
     padding: Spacing.lg,
     gap: Spacing.md,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
+    ...Shadows.sheetTop,
   },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatar: {
@@ -500,6 +493,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
   },
   name: { fontSize: 18, fontWeight: '800', color: Colors.text },
   role: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
@@ -552,13 +547,14 @@ const styles = StyleSheet.create({
   otpBox: {
     width: 48,
     height: 48,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
     borderColor: Colors.border,
     textAlign: 'center',
     fontSize: 20,
     fontWeight: '800',
     color: Colors.text,
+    backgroundColor: Colors.surfaceElevated,
   },
   otpBoxOk: { borderColor: Colors.primary },
   startTripSolid: {

@@ -1,4 +1,4 @@
-import { Colors, Spacing } from '@/constants/theme';
+import { Colors, Spacing, Type } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -61,9 +61,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'center',
+    ...Type.h2,
     fontSize: 17,
-    fontWeight: '700',
-    color: Colors.text,
   },
   iconBtn: { width: 40, alignItems: 'flex-start' },
   iconPlaceholder: { width: 40 },

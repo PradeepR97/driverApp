@@ -1,7 +1,7 @@
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { OnboardingStepper } from '@/components/OnboardingStepper';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { MetaOptionItem } from '@/lib/api/meta';
 import { getVehicleOnboardingMeta } from '@/lib/api/meta';
 import { postOnboardingVehicle } from '@/lib/api/onboarding';
@@ -228,7 +228,7 @@ export default function VehicleDetailsScreen() {
             <>
               <Text style={styles.uploadLabel}>Vehicle RC *</Text>
               <View style={styles.uploadBtn}>
-                <Ionicons name="camera" size={18} color={Colors.primary} />
+                <Ionicons name="camera" size={18} color={Colors.link} />
                 <Text style={styles.uploadBtnText}>Upload</Text>
               </View>
             </>
@@ -386,22 +386,24 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
-    minHeight: 50,
+    minHeight: 52,
     fontSize: 16,
     color: Colors.text,
+    backgroundColor: Colors.surfaceElevated,
   },
   inputLike: {
     marginTop: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
-    minHeight: 50,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: Colors.surfaceElevated,
   },
   inputText: { fontSize: 16, color: Colors.text, flex: 1, paddingRight: Spacing.sm },
   placeholder: { fontSize: 16, color: Colors.textMuted, flex: 1 },
@@ -409,12 +411,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.sm,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   uploadDone: {
     borderColor: Colors.primary,
@@ -431,7 +435,7 @@ const styles = StyleSheet.create({
   uploadLabel: { fontSize: 15, fontWeight: '600', color: Colors.text, flex: 1 },
   rcUrl: { fontSize: 11, color: Colors.primary, marginTop: 4 },
   uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  uploadBtnText: { color: Colors.primary, fontWeight: '700' },
+  uploadBtnText: { color: Colors.link, fontWeight: '700' },
   typeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

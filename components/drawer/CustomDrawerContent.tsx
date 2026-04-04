@@ -1,4 +1,4 @@
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { performLogout } from '@/lib/auth/performLogout';
 import { useDriverStore } from '@/lib/driver-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,7 +95,7 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <Ionicons name="car-outline" size={18} color={Colors.primary} />
+              <Ionicons name="car-outline" size={18} color={Colors.primaryDark} />
               <Text style={styles.statVal}>{tripCount}</Text>
               <Text style={styles.statLabel}>Trips</Text>
             </View>
@@ -204,11 +204,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.lg,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.xl,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
     gap: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    ...Shadows.floatSm,
   },
   stat: { alignItems: 'center', minWidth: 72 },
   statVal: { fontSize: 18, fontWeight: '800', color: Colors.text, marginTop: 4 },
@@ -229,8 +232,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     backgroundColor: Colors.danger,
     paddingVertical: Spacing.md,
-    borderRadius: Radius.xl,
+    borderRadius: Radius.xxl,
     minHeight: 52,
+    ...Shadows.floatSm,
   },
   logoutBtnDisabled: { opacity: 0.75 },
   logoutText: { fontSize: 16, fontWeight: '800', color: '#fff' },

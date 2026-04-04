@@ -1,6 +1,6 @@
 import { MapGridBackground } from '@/components/MapGridBackground';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { postAcceptDriverOrder, postDeclineDriverOrder } from '@/lib/api/driver-orders';
 import { mockTripFromNewOrder, useDriverStore } from '@/lib/driver-store';
 import { useDriverOnlineWebSocket } from '@/lib/hooks/useDriverOnlineWebSocket';
@@ -216,7 +216,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.compactRight}>
             <View style={styles.miniIcon}>
-              <Ionicons name="car-outline" size={18} color={Colors.primary} />
+              <Ionicons name="car-outline" size={18} color={Colors.primaryDark} />
             </View>
             <View>
               <Text style={styles.compactLabel}>Trips</Text>
@@ -228,12 +228,15 @@ export default function HomeScreen() {
 
       {isOnline && searching && !showOffer && (
         <View style={styles.radarWrap}>
-          <Animated.View style={[styles.radarRing, { transform: [{ scale }], opacity }]} />
+          <Animated.View
+            style={[styles.radarRing, styles.radarRing3, { transform: [{ scale }], opacity }]}
+          />
           <Animated.View
             style={[styles.radarRing, styles.radarRing2, { transform: [{ scale }], opacity }]}
           />
+          <Animated.View style={[styles.radarRing, { transform: [{ scale }], opacity }]} />
           <View style={styles.radarCore}>
-            <View style={styles.radarDot} />
+            <Ionicons name="time-outline" size={26} color="#fff" />
           </View>
           <Text style={styles.searchingText}>Searching for orders...</Text>
         </View>
@@ -284,13 +287,15 @@ export default function HomeScreen() {
             </View>
             {pendingNewOrder?.helperRequired ? (
               <View style={styles.warnBanner}>
-                <Ionicons name="warning" size={18} color={Colors.warning} />
+                <Ionicons name="warning" size={18} color={Colors.helperBannerText} />
                 <Text style={styles.warnText}>Helper required — loading assistance</Text>
               </View>
             ) : null}
             <View style={styles.route}>
               <View style={styles.routeRow}>
-                <View style={[styles.dot, { backgroundColor: Colors.primary }]} />
+                <View style={[styles.routeDotOuter, styles.routeDotPickup]}>
+                  <View style={styles.routeDotInner} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.routeLabel}>PICKUP</Text>
                   <Text style={styles.routePlace}>{pendingNewOrder?.pickup ?? '—'}</Text>
@@ -298,7 +303,9 @@ export default function HomeScreen() {
               </View>
               <View style={styles.dotted} />
               <View style={styles.routeRow}>
-                <View style={[styles.dot, { backgroundColor: Colors.danger }]} />
+                <View style={[styles.routeDotOuter, styles.routeDotDrop]}>
+                  <View style={styles.routeDotInner} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.routeLabel}>DROP</Text>
                   <Text style={styles.routePlace}>{pendingNewOrder?.drop ?? '—'}</Text>
@@ -367,36 +374,28 @@ function SummaryTile({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.surface },
+  screen: { flex: 1, backgroundColor: Colors.background },
   menuBtn: {
     position: 'absolute',
     left: Spacing.md,
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
     zIndex: 2,
+    ...Shadows.floatMd,
   },
   summaryWrap: {
     position: 'absolute',
     left: Spacing.lg,
     right: Spacing.lg,
-    backgroundColor: '#fff',
-    borderRadius: Radius.lg,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.xxl,
     padding: Spacing.lg,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
     zIndex: 1,
+    ...Shadows.floatMd,
   },
   summaryTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: Spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
@@ -416,16 +415,12 @@ const styles = StyleSheet.create({
     left: Spacing.lg,
     right: Spacing.lg,
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.xxl,
+    padding: Spacing.md + 2,
     justifyContent: 'space-between',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
     zIndex: 1,
+    ...Shadows.floatMd,
   },
   compactLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   compactRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -437,7 +432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rupee: { fontSize: 18, fontWeight: '800', color: Colors.primary },
+  rupee: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
   compactLabel: { fontSize: 12, color: Colors.textSecondary },
   compactValue: { fontSize: 18, fontWeight: '800', color: Colors.text },
   radarWrap: {
@@ -452,9 +447,10 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: 'rgba(31, 168, 123, 0.35)',
   },
   radarRing2: { width: 220, height: 220, borderRadius: 110 },
+  radarRing3: { width: 280, height: 280, borderRadius: 140, borderWidth: 1 },
   radarCore: {
     width: 56,
     height: 56,
@@ -462,12 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  radarDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
+    ...Shadows.floatSm,
   },
   searchingText: { marginTop: Spacing.lg, fontSize: 16, color: Colors.textSecondary, fontWeight: '600' },
   bottom: {
@@ -520,7 +511,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.dangerSoft,
     borderRadius: Radius.xl,
     paddingVertical: 6,
     paddingLeft: 6,
@@ -544,35 +535,38 @@ const styles = StyleSheet.create({
   },
   offerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: Colors.overlay,
     justifyContent: 'flex-end',
   },
   offerSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
+    backgroundColor: Colors.surfaceElevated,
+    borderTopLeftRadius: Radius.xxl,
+    borderTopRightRadius: Radius.xxl,
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
+    ...Shadows.sheetTop,
   },
   offerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   offerTitle: { fontSize: 20, fontWeight: '800', color: Colors.text },
   timerBadge: {
-    backgroundColor: '#FECACA',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: Colors.timerPink,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: Radius.full,
   },
-  timerText: { fontWeight: '800', color: Colors.danger },
+  timerText: { fontWeight: '800', color: Colors.timerRed, fontSize: 13 },
   warnBanner: {
     marginTop: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    backgroundColor: Colors.warningSoft,
+    backgroundColor: Colors.helperBannerBg,
+    borderWidth: 1,
+    borderColor: Colors.helperBannerBorder,
     padding: Spacing.md,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
   },
-  warnText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.text },
+  warnText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.helperBannerText },
   customerName: {
     marginTop: Spacing.md,
     fontSize: 14,
@@ -581,7 +575,22 @@ const styles = StyleSheet.create({
   },
   route: { marginTop: Spacing.lg },
   routeRow: { flexDirection: 'row', gap: Spacing.md },
-  dot: { width: 10, height: 10, borderRadius: 5, marginTop: 6 },
+  routeDotOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  routeDotPickup: { backgroundColor: Colors.primary },
+  routeDotDrop: { backgroundColor: Colors.danger },
+  routeDotInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+  },
   dotted: {
     width: 2,
     height: 20,
@@ -597,13 +606,13 @@ const styles = StyleSheet.create({
   fareBar: {
     marginTop: Spacing.lg,
     backgroundColor: Colors.primarySoft,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  fareLabel: { fontSize: 14, color: Colors.textSecondary },
-  fareAmt: { fontSize: 22, fontWeight: '800', color: Colors.primary },
+  fareLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600' },
+  fareAmt: { fontSize: 22, fontWeight: '800', color: Colors.primaryDark },
   offerActions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.lg },
 });

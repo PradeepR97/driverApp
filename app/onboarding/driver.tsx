@@ -1,7 +1,7 @@
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { OnboardingStepper } from '@/components/OnboardingStepper';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { postOnboardingDriver } from '@/lib/api/onboarding';
 import { uploadLocalImageToS3 } from '@/lib/api/upload';
 import { normalizePhoneDigits } from '@/lib/api/auth';
@@ -176,7 +176,7 @@ export default function DriverDetailsScreen() {
           <Pressable style={styles.dlCard} onPress={pickDl} disabled={submitting}>
             <Text style={styles.dlTitle}>Driving License *</Text>
             <View style={styles.uploadBtn}>
-              <Ionicons name="camera" size={18} color={Colors.primary} />
+              <Ionicons name="camera" size={18} color={Colors.link} />
               <Text style={styles.uploadBtnText}>Upload</Text>
             </View>
           </Pressable>
@@ -213,11 +213,13 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   toggleActive: { borderColor: Colors.primary, backgroundColor: Colors.primarySoft },
   radio: {
@@ -234,11 +236,12 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
-    minHeight: 50,
+    minHeight: 52,
     fontSize: 16,
     color: Colors.text,
+    backgroundColor: Colors.surfaceElevated,
   },
   phoneRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
   cc: {
@@ -247,19 +250,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    minHeight: 50,
+    borderRadius: Radius.lg,
+    minHeight: 52,
+    backgroundColor: Colors.surface,
   },
   ccText: { fontWeight: '600', color: Colors.text },
   dlCard: {
     marginTop: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    backgroundColor: Colors.surfaceElevated,
+    ...Shadows.floatSm,
   },
   dlDone: { borderColor: Colors.primary, backgroundColor: Colors.primarySoft },
   checkCircle: {
@@ -273,7 +279,7 @@ const styles = StyleSheet.create({
   dlTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
   dlFile: { fontSize: 12, color: Colors.primary, marginTop: 2 },
   uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  uploadBtnText: { color: Colors.primary, fontWeight: '700' },
+  uploadBtnText: { color: Colors.link, fontWeight: '700' },
   note: {
     marginTop: Spacing.lg,
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import {
   ActivityIndicator,
   Pressable,
@@ -65,13 +65,14 @@ const styles = StyleSheet.create({
   base: {
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.xl,
+    borderRadius: Radius.xxl,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
   },
   filled: {
     backgroundColor: Colors.primary,
+    ...Shadows.floatSm,
   },
   outline: {
     backgroundColor: Colors.background,
@@ -84,8 +85,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.danger,
   },
   disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.92 },
-  label: { fontSize: 16, fontWeight: '700' },
+  pressed: { transform: [{ scale: 0.96 }] },
+  label: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   labelFilled: { color: '#fff' },
   labelOutline: { color: Colors.text },
   labelDanger: { color: Colors.danger },
