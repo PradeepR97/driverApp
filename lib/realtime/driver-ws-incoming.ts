@@ -8,6 +8,7 @@ export type NewOrderOffer = {
   estimatedFare: number;
   helperRequired: boolean;
   customerName?: string;
+  customerPhone?: string;
   pickupLatitude?: number;
   pickupLongitude?: number;
   dropLatitude?: number;
@@ -71,6 +72,12 @@ export function parseDriverWsMessage(data: unknown): ParsedDriverWsMessage {
       estimatedFare: Number(p.estimatedFare ?? 0),
       helperRequired: Boolean(p.helperRequired),
       customerName: typeof p.customerName === 'string' ? p.customerName : undefined,
+      customerPhone:
+        typeof p.customerPhone === 'string'
+          ? p.customerPhone
+          : typeof p.phoneNumber === 'string'
+            ? p.phoneNumber
+            : undefined,
       pickupLatitude: readOptionalCoord(p, 'pickupLatitude', 'pickup_lat', 'pickupLat'),
       pickupLongitude: readOptionalCoord(p, 'pickupLongitude', 'pickup_lng', 'pickup_lon', 'pickupLng'),
       dropLatitude: readOptionalCoord(p, 'dropLatitude', 'drop_lat', 'dropLat'),

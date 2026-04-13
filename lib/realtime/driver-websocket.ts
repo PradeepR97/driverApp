@@ -26,6 +26,16 @@ export type DriverWebSocketController = {
 const MAX_DELAY_MS = 30_000;
 const BASE_DELAY_MS = 1_000;
 
+/** Log URL without query (tokens must not appear in logs). */
+function wsUrlForLog(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}${u.pathname}`;
+  } catch {
+    return '(invalid url)';
+  }
+}
+
 /**
  * Native (iOS/Android): `Authorization: Bearer <jwt>` on the handshake (per backend spec).
  * Web: browsers cannot set WS headers — `access_token` query is appended as a fallback for dev.
@@ -85,13 +95,25 @@ export function connectDriverWebSocketWithRetry(options: {
     if (closedManually || !options.shouldReconnect()) return;
     const conn = options.getConnection();
     if (!conn) {
+      if (__DEV__) {
+        console.warn(
+          '[driver-ws] connect skipped: no connection (missing access token or invalid WS URL — check EXPO_PUBLIC_API_URL / EXPO_PUBLIC_WS_URL)',
+        );
+      }
       scheduleReconnect();
       return;
     }
 
+    if (__DEV__) {
+      console.log('[driver-ws] connecting', wsUrlForLog(conn.url), `(attempt ${attempt + 1})`);
+    }
+
     try {
       ws = openDriverWebSocket(conn.url, conn.bearerToken);
-    } catch {
+    } catch (e) {
+      if (__DEV__) {
+        console.warn('[driver-ws] new WebSocket threw', e);
+      }
       options.handlers.onError?.();
       scheduleReconnect();
       return;
@@ -100,6 +122,9 @@ export function connectDriverWebSocketWithRetry(options: {
     const socket = ws;
 
     socket.onopen = () => {
+      if (__DEV__) {
+        console.log('[driver-ws] open', wsUrlForLog(conn.url));
+      }
       attempt = 0;
       options.handlers.onOpen?.();
       const payload = options.getConnectPayload?.() ?? null;
@@ -123,10 +148,25 @@ export function connectDriverWebSocketWithRetry(options: {
     };
 
     socket.onerror = () => {
+      if (__DEV__) {
+        console.warn(
+          '[driver-ws] error event (React Native often omits details; watch the following close code)',
+        );
+      }
       options.handlers.onError?.();
     };
 
     socket.onclose = (ev) => {
+      if (__DEV__) {
+        const reason = ev.reason ?? '';
+        console.warn(
+          '[driver-ws] closed',
+          'code=',
+          ev.code,
+          reason ? `reason=${reason}` : '(no reason)',
+          '— see https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code',
+        );
+      }
       ws = null;
       options.handlers.onClose?.(ev.code, ev.reason ?? '');
       if (!closedManually && options.shouldReconnect()) {

@@ -1,4 +1,5 @@
 import { META_OPTIONS_PATH } from '@/lib/config';
+import { i18n } from '@/lib/i18n';
 
 import { api, getApiErrorMessage } from './client';
 import type { ApiEnvelope } from './types';
@@ -18,27 +19,35 @@ export const MetaCategory = {
   CANCELLATION_REASON_TRIP: 'CANCELLATION_REASON_TRIP',
   REJECTION_REASON: 'REJECTION_REASON',
   RATING: 'RATING',
+  RATING_REASON: 'RATING_REASON',
 } as const;
 
 export type MetaCategoryCode = (typeof MetaCategory)[keyof typeof MetaCategory];
 
-function normalizeItem(raw: unknown): MetaOptionItem | null {
+function normalizeItem(raw: unknown, language: 'en' | 'hi' | 'ta'): MetaOptionItem | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const code = typeof o.code === 'string' ? o.code : '';
-  const displayName =
+  const localized =
+    language === 'ta'
+      ? o.displayNameTa ?? o.display_name_ta
+      : language === 'hi'
+        ? o.displayNameHi ?? o.display_name_hi
+        : o.displayNameEn ?? o.display_name_en;
+  const fallbackDisplayName =
     typeof o.displayName === 'string'
       ? o.displayName
       : typeof o.display_name === 'string'
         ? o.display_name
         : '';
+  const displayName = (typeof localized === 'string' ? localized : '') || fallbackDisplayName;
   if (!code) return null;
   return { code, displayName: displayName || code };
 }
 
-function normalizeCategoryList(raw: unknown): MetaOptionItem[] {
+function normalizeCategoryList(raw: unknown, language: 'en' | 'hi' | 'ta'): MetaOptionItem[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map(normalizeItem).filter((x): x is MetaOptionItem => x != null);
+  return raw.map((item) => normalizeItem(item, language)).filter((x): x is MetaOptionItem => x != null);
 }
 
 /**
@@ -52,6 +61,8 @@ export async function getMetaOptions(
     throw new Error('categories must have 1–10 entries');
   }
   const categoriesParam = categories.join(',');
+  const lang: 'en' | 'hi' | 'ta' =
+    i18n.language?.startsWith('ta') ? 'ta' : i18n.language?.startsWith('hi') ? 'hi' : 'en';
   try {
     const { data } = await api.get<ApiEnvelope<Record<string, unknown>>>(META_OPTIONS_PATH, {
       params: { categories: categoriesParam },
@@ -65,7 +76,7 @@ export async function getMetaOptions(
     }
     const out: Record<string, MetaOptionItem[]> = {};
     for (const key of categories) {
-      out[key] = normalizeCategoryList((payload as Record<string, unknown>)[key]);
+      out[key] = normalizeCategoryList((payload as Record<string, unknown>)[key], lang);
     }
     return out;
   } catch (e) {

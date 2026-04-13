@@ -4,7 +4,7 @@ import {
   ONBOARDING_VEHICLE_PATH,
 } from '@/lib/config';
 
-import { api, getApiErrorMessage } from './client';
+import { api, expectHttp200, getApiErrorMessage } from './client';
 import type { ApiEnvelope } from './types';
 import { isApiFailure } from './types';
 
@@ -35,14 +35,18 @@ export type PostVehicleBody = {
 
 export type PostDriverBody = {
   isSelfDriving: boolean;
-  driverName: string;
-  driverPhone: string;
+  /** Driver name (backend may ignore when self-driving). */
+  name: string;
+  /** 10-digit phone (backend may ignore when self-driving). */
+  phoneNumber: string;
   driverLicenseUrl: string;
 };
 
 async function postEnvelope(path: string, body: unknown): Promise<void> {
   try {
-    const { data } = await api.post<ApiEnvelope<unknown>>(path, body);
+    const res = await api.post<ApiEnvelope<unknown>>(path, body);
+    expectHttp200(res);
+    const { data } = res;
     if (isApiFailure(data)) {
       throw new Error(data.message ?? 'Request failed');
     }
@@ -61,4 +65,48 @@ export async function postOnboardingVehicle(body: PostVehicleBody): Promise<void
 
 export async function postOnboardingDriver(body: PostDriverBody): Promise<void> {
   await postEnvelope(ONBOARDING_DRIVER_PATH, body);
+}
+
+export type GetOwnerOnboardingResponse = {
+  name?: string;
+  ownerSelfieDocumentId?: string;
+  ownerAdharDocumentId?: string;
+  ownerPanDocumentId?: string;
+};
+
+export async function getOnboardingOwner(): Promise<GetOwnerOnboardingResponse> {
+  try {
+    const res = await api.get<ApiEnvelope<GetOwnerOnboardingResponse>>(ONBOARDING_OWNER_PATH);
+    expectHttp200(res);
+    const { data } = res;
+    if (isApiFailure(data)) {
+      throw new Error(data.message ?? 'Could not load owner onboarding');
+    }
+    return data.data ?? {};
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e));
+  }
+}
+
+export type GetVehicleOnboardingResponse = {
+  registrationNumber?: string;
+  city?: string;
+  vehicleType?: string;
+  bodyType?: string;
+  bodySpec?: string;
+  rcDocumentId?: string;
+};
+
+export async function getOnboardingVehicle(): Promise<GetVehicleOnboardingResponse> {
+  try {
+    const res = await api.get<ApiEnvelope<GetVehicleOnboardingResponse>>(ONBOARDING_VEHICLE_PATH);
+    expectHttp200(res);
+    const { data } = res;
+    if (isApiFailure(data)) {
+      throw new Error(data.message ?? 'Could not load vehicle onboarding');
+    }
+    return data.data ?? {};
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e));
+  }
 }

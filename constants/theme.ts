@@ -1,36 +1,13 @@
 import type { TextStyle, ViewStyle } from 'react-native';
 
-/**
- * Palette aligned with Screenshots.docx reference: mint/teal partner UI,
- * emerald CTAs, light surfaces, high-contrast type.
- */
-export const Colors = {
-  primary: '#1FA87B',
-  primaryDark: '#0E8F68',
-  primaryMuted: '#B8E8D5',
-  primarySoft: '#E8F7F1',
-  accentMint: '#8ED9BA',
-  background: '#FFFFFF',
-  surface: '#F4F6F8',
-  surfaceElevated: '#FFFFFF',
-  border: '#E8ECF0',
-  text: '#1A1A1A',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  danger: '#E11D48',
-  dangerSoft: '#FEE4E8',
-  warning: '#D97706',
-  warningSoft: '#FEF3C7',
-  orange: '#EA580C',
-  star: '#F59E0B',
-  link: '#00A896',
-  black: '#000000',
-  overlay: 'rgba(15, 23, 42, 0.45)',
-  timerPink: '#FCE7F3',
-  timerRed: '#BE123C',
-  helperBannerBg: '#FEF9C3',
-  helperBannerBorder: '#FDE047',
-  helperBannerText: '#854D0E',
+import { Colors } from '@/theme/colors';
+export { Colors };
+
+export const Font = {
+  regular: 'NotoSans_400Regular',
+  semibold: 'NotoSans_600SemiBold',
+  bold: 'NotoSans_700Bold',
+  extrabold: 'NotoSans_800ExtraBold',
 } as const;
 
 export const Spacing = {
@@ -88,14 +65,26 @@ export const Type = {
     fontWeight: '800' as const,
     letterSpacing: 0.35,
     color: Colors.text,
+    fontFamily: Font.extrabold,
   } satisfies TextStyle,
   h2: {
     fontSize: 18,
     fontWeight: '800' as const,
     letterSpacing: 0.2,
     color: Colors.text,
+    fontFamily: Font.extrabold,
   } satisfies TextStyle,
-  body: { fontSize: 15, fontWeight: '400' as const, color: Colors.textSecondary } satisfies TextStyle,
-  caption: { fontSize: 13, fontWeight: '500' as const, color: Colors.textSecondary } satisfies TextStyle,
-  button: { fontSize: 16, fontWeight: '700' as const } satisfies TextStyle,
+  body: {
+    fontSize: 15,
+    fontWeight: '400' as const,
+    color: Colors.textSecondary,
+    fontFamily: Font.regular,
+  } satisfies TextStyle,
+  caption: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: Colors.textSecondary,
+    fontFamily: Font.regular,
+  } satisfies TextStyle,
+  button: { fontSize: 16, fontWeight: '700' as const, fontFamily: Font.bold } satisfies TextStyle,
 } as const;

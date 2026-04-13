@@ -1,17 +1,25 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, {
+    type AxiosError,
+    type AxiosResponse,
+    type InternalAxiosRequestConfig,
+} from "axios";
 
-import { getAccessToken } from '@/lib/auth-session';
-import { API_BASE_URL } from '@/lib/config';
+import { attachGlobalLoaderInterceptor } from "@/lib/api/global-loader-interceptor";
+import { getAccessToken } from "@/lib/auth-session";
+import { API_BASE_URL } from "@/lib/config";
 
-import type { ApiEnvelope } from './types';
+import type { ApiEnvelope } from "./types";
 
-declare module 'axios' {
+declare module "axios" {
   interface AxiosRequestConfig {
     /** When true, do not send `Authorization` (e.g. OTP request / verify). */
     skipAuth?: boolean;
+    /** When true, the global API loader overlay ignores this request. */
+    skipGlobalLoader?: boolean;
   }
   interface InternalAxiosRequestConfig {
     skipAuth?: boolean;
+    skipGlobalLoader?: boolean;
     metadata?: { id: number; startedAt: number };
   }
 }
@@ -21,20 +29,30 @@ declare module 'axios' {
  * - Default: on in `__DEV__`, unless `EXPO_PUBLIC_API_DEBUG=false`
  * - Release: only if `EXPO_PUBLIC_API_DEBUG=true`
  */
-const API_DEBUG_RAW = typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_API_DEBUG : undefined;
+const API_DEBUG_RAW =
+  typeof process !== "undefined"
+    ? process.env?.EXPO_PUBLIC_API_DEBUG
+    : undefined;
 const API_DEBUG =
-  API_DEBUG_RAW === 'false' || API_DEBUG_RAW === '0'
+  API_DEBUG_RAW === "false" || API_DEBUG_RAW === "0"
     ? false
-    : (typeof __DEV__ !== 'undefined' && __DEV__) || API_DEBUG_RAW === 'true';
+    : (typeof __DEV__ !== "undefined" && __DEV__) || API_DEBUG_RAW === "true";
 
 let requestSeq = 0;
 
 function sanitizeForLog(data: unknown): unknown {
   if (data == null) return data;
-  if (typeof data !== 'object') return data;
+  if (typeof data !== "object") return data;
   const o = { ...(data as Record<string, unknown>) };
-  for (const key of ['otp', 'password', 'token', 'accessToken', 'refreshToken', 'authorization']) {
-    if (key in o && o[key] != null) o[key] = '***';
+  for (const key of [
+    "otp",
+    "password",
+    "token",
+    "accessToken",
+    "refreshToken",
+    "authorization",
+  ]) {
+    if (key in o && o[key] != null) o[key] = "***";
   }
   return o;
 }
@@ -42,19 +60,19 @@ function sanitizeForLog(data: unknown): unknown {
 function summarizeForLog(data: unknown, maxLen = 900): unknown {
   if (data == null) return data;
   try {
-    const s = typeof data === 'string' ? data : JSON.stringify(data);
+    const s = typeof data === "string" ? data : JSON.stringify(data);
     if (s.length <= maxLen) return data;
     return `${s.slice(0, maxLen)}… (${s.length} chars total)`;
   } catch {
-    return '[unserializable]';
+    return "[unserializable]";
   }
 }
 
 function buildFullUrl(config: InternalAxiosRequestConfig): string {
-  const base = (config.baseURL ?? '').replace(/\/$/, '');
-  const path = config.url ?? '';
-  if (path.startsWith('http')) return path;
-  const p = path.startsWith('/') ? path : `/${path}`;
+  const base = (config.baseURL ?? "").replace(/\/$/, "");
+  const path = config.url ?? "";
+  if (path.startsWith("http")) return path;
+  const p = path.startsWith("/") ? path : `/${path}`;
   return base ? `${base}${p}` : p;
 }
 
@@ -62,10 +80,39 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 45_000,
   headers: {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
+    Accept: "application/json",
+    "Content-Type": "application/json",
   },
 });
+
+function getNon200Message(body: unknown, status: number): string {
+  if (
+    body &&
+    typeof body === "object" &&
+    "message" in body &&
+    (body as { message?: unknown }).message != null
+  ) {
+    return String((body as { message?: unknown }).message);
+  }
+  if (status >= 500) return "Server error. Please try again later.";
+  if (status === 401) return "Session expired. Please sign in again.";
+  if (status === 403) return "You do not have permission for this action.";
+  if (status === 404) return "Resource not found.";
+  return `Request failed (${status}).`;
+}
+
+/**
+ * Enforce HTTP 200-only success for form-style calls.
+ * (We do NOT do this globally since some endpoints legitimately return 204.)
+ */
+export function expectHttp200<T = unknown>(
+  res: AxiosResponse<T>,
+): AxiosResponse<T> {
+  if (res.status !== 200) {
+    throw new Error(getNon200Message(res.data, res.status));
+  }
+  return res;
+}
 
 api.interceptors.request.use((config) => {
   const id = ++requestSeq;
@@ -80,11 +127,15 @@ api.interceptors.request.use((config) => {
 
   if (API_DEBUG) {
     const fullUrl = buildFullUrl(config);
-    console.log(`[API → #${id}] ${(config.method ?? 'GET').toUpperCase()} ${fullUrl}`, {
-      skipAuth: !!config.skipAuth,
-      params: config.params,
-      body: config.data !== undefined ? sanitizeForLog(config.data) : undefined,
-    });
+    console.log(
+      `[API → #${id}] ${(config.method ?? "GET").toUpperCase()} ${fullUrl}`,
+      {
+        skipAuth: !!config.skipAuth,
+        params: config.params,
+        body:
+          config.data !== undefined ? sanitizeForLog(config.data) : undefined,
+      },
+    );
   }
 
   return config;
@@ -96,7 +147,7 @@ api.interceptors.response.use(
       const meta = response.config.metadata;
       const ms = meta ? Date.now() - meta.startedAt : 0;
       console.log(
-        `[API ← #${meta?.id ?? '?'}] ${response.status} ${(response.config.method ?? '').toUpperCase()} ${buildFullUrl(response.config)} (${ms}ms)`,
+        `[API ← #${meta?.id ?? "?"}] ${response.status} ${(response.config.method ?? "").toUpperCase()} ${buildFullUrl(response.config)} (${ms}ms)`,
         { data: summarizeForLog(response.data) },
       );
     }
@@ -107,9 +158,11 @@ api.interceptors.response.use(
       const cfg = error.config;
       const meta = cfg?.metadata;
       const ms = meta && cfg ? Date.now() - meta.startedAt : 0;
-      const fullUrl = cfg ? buildFullUrl(cfg) : error.config?.url ?? '(unknown url)';
+      const fullUrl = cfg
+        ? buildFullUrl(cfg)
+        : (error.config?.url ?? "(unknown url)");
       console.warn(
-        `[API × #${meta?.id ?? '?'}] ${(cfg?.method ?? '?').toUpperCase()} ${fullUrl} (${ms}ms)`,
+        `[API × #${meta?.id ?? "?"}] ${(cfg?.method ?? "?").toUpperCase()} ${fullUrl} (${ms}ms)`,
         {
           message: error.message,
           code: error.code,
@@ -122,6 +175,8 @@ api.interceptors.response.use(
   },
 );
 
+attachGlobalLoaderInterceptor(api);
+
 /**
  * Human-readable message for any API failure (envelope, HTTP status, timeout, network).
  */
@@ -129,31 +184,36 @@ export function getApiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     const ax = err as AxiosError<ApiEnvelope<unknown>>;
 
-    if (ax.code === 'ECONNABORTED' || /timeout/i.test(ax.message)) {
-      return 'Request timed out. Please try again.';
+    if (ax.code === "ECONNABORTED" || /timeout/i.test(ax.message)) {
+      return "Request timed out. Please try again.";
     }
 
     if (!ax.response) {
-      return 'Unable to reach the server. Check your connection and try again.';
+      return "Unable to reach the server. Check your connection and try again.";
     }
 
     const body = ax.response.data;
-    if (body && typeof body === 'object' && 'message' in body && body.message != null) {
+    if (
+      body &&
+      typeof body === "object" &&
+      "message" in body &&
+      body.message != null
+    ) {
       return String((body as { message?: string }).message);
     }
 
     const status = ax.response.status;
     if (status >= 500) {
-      return 'Server error. Please try again later.';
+      return "Server error. Please try again later.";
     }
     if (status === 401) {
-      return 'Session expired. Please sign in again.';
+      return "Session expired. Please sign in again.";
     }
     if (status === 403) {
-      return 'You do not have permission for this action.';
+      return "You do not have permission for this action.";
     }
     if (status === 404) {
-      return 'Resource not found.';
+      return "Resource not found.";
     }
 
     if (ax.message) {
@@ -165,12 +225,12 @@ export function getApiErrorMessage(err: unknown): string {
     return err.message;
   }
 
-  return 'Something went wrong. Please try again.';
+  return "Something went wrong. Please try again.";
 }
 
 /** True when there is no HTTP response (offline, DNS, refused connection). */
 export function isApiNetworkError(err: unknown): boolean {
   if (!axios.isAxiosError(err)) return false;
   const ax = err as AxiosError;
-  return !ax.response && (!!ax.code || ax.message === 'Network Error');
+  return !ax.response && (!!ax.code || ax.message === "Network Error");
 }

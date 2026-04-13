@@ -35,7 +35,7 @@ export function OnboardingStepper({ steps, currentIndex }: Props) {
                 ]}
               >
                 {done ? (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={16} color={Colors.white} />
                 ) : (
                   <Text style={[styles.num, (active || done) && styles.numOnPrimary]}>
                     {i + 1}
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   circleActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   circleDone: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   num: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
-  numOnPrimary: { color: '#fff' },
+  numOnPrimary: { color: Colors.white },
   label: {
     marginTop: Spacing.xs,
     fontSize: 12,

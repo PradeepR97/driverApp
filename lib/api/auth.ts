@@ -1,6 +1,6 @@
 import { AUTH_USER_TYPE } from '@/lib/config';
 
-import { api, getApiErrorMessage } from './client';
+import { api, expectHttp200, getApiErrorMessage } from './client';
 import type { ApiEnvelope } from './types';
 import { isApiFailure } from './types';
 
@@ -17,9 +17,11 @@ export type OtpRequestResponse = {
 
 export async function postOtpRequest(payload: OtpRequestPayload): Promise<OtpRequestResponse> {
   try {
-    const { data } = await api.post<ApiEnvelope<OtpRequestResponse>>('/auth/otp/request', payload, {
+    const res = await api.post<ApiEnvelope<OtpRequestResponse>>('/auth/otp/request', payload, {
       skipAuth: true,
     });
+    expectHttp200(res);
+    const { data } = res;
     if (isApiFailure(data)) {
       throw new Error(data.message ?? 'Could not send OTP');
     }
@@ -33,9 +35,11 @@ export async function postOtpVerify(
   payload: OtpRequestPayload & { otp: string },
 ): Promise<unknown> {
   try {
-    const { data } = await api.post<ApiEnvelope<unknown>>('/auth/otp/verify', payload, {
+    const res = await api.post<ApiEnvelope<unknown>>('/auth/otp/verify', payload, {
       skipAuth: true,
     });
+    expectHttp200(res);
+    const { data } = res;
     if (isApiFailure(data)) {
       throw new Error(data.message ?? 'Invalid OTP');
     }

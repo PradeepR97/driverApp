@@ -43,7 +43,7 @@ export function PrimaryButton({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'filled' ? '#fff' : Colors.primary} />
+        <ActivityIndicator color={variant === 'filled' ? Colors.white : Colors.primary} />
       ) : (
         <Text
           style={[
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   pressed: { transform: [{ scale: 0.96 }] },
   label: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
-  labelFilled: { color: '#fff' },
+  labelFilled: { color: Colors.white },
   labelOutline: { color: Colors.text },
   labelDanger: { color: Colors.danger },
 });

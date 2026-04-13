@@ -3,10 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export default function VerificationPendingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + Spacing.xl, paddingBottom: insets.bottom + Spacing.lg }]}>
@@ -14,22 +16,22 @@ export default function VerificationPendingScreen() {
         <View style={styles.clockCircle}>
           <Ionicons name="time-outline" size={56} color={Colors.primary} />
           <View style={styles.badge}>
-            <Ionicons name="checkmark" size={14} color="#fff" />
+            <Ionicons name="checkmark" size={14} color={Colors.white} />
           </View>
         </View>
-        <Text style={styles.title}>Verification in Progress</Text>
+        <Text style={styles.title}>{t('verification.title')}</Text>
         <Text style={styles.sub}>
-          We&apos;re reviewing your documents and profile. This usually takes{' '}
-          <Text style={styles.subBold}>24-48 hours.</Text>
+          {t('verification.subtitle')}{' '}
+          <Text style={styles.subBold}>{t('verification.duration')}</Text>
         </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>What&apos;s next?</Text>
+        <Text style={styles.cardTitle}>{t('verification.whats_next')}</Text>
         {[
-          'Our team will verify your documents',
-          "You'll receive a notification once approved",
-          'Start accepting orders and earn!',
+          t('verification.next_1'),
+          t('verification.next_2'),
+          t('verification.next_3'),
         ].map((line, i) => (
           <View key={i} style={styles.stepRow}>
             <View style={styles.stepNum}>
@@ -47,10 +49,10 @@ export default function VerificationPendingScreen() {
         onPress={() => Linking.openURL('tel:+18000000000')}
       >
         <Ionicons name="call-outline" size={20} color={Colors.text} />
-        <Text style={styles.supportText}>Contact Support</Text>
+        <Text style={styles.supportText}>{t('common.contact_support')}</Text>
       </Pressable>
       <Pressable onPress={() => router.replace('/permissions')}>
-        <Text style={styles.demo}>(Demo: Skip to Home Screen)</Text>
+        <Text style={styles.demo}>{t('verification.demo_skip')}</Text>
       </Pressable>
     </View>
   );

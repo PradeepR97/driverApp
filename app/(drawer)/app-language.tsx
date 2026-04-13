@@ -1,10 +1,12 @@
 import { PlaceholderDrawerScreen } from '@/components/drawer/PlaceholderDrawerScreen';
+import { useTranslation } from 'react-i18next';
 
 export default function AppLanguageScreen() {
+  const { t } = useTranslation();
   return (
     <PlaceholderDrawerScreen
-      title="Language"
-      subtitle="Placeholder — wire preferred language and POST /users/language here if needed."
+      title={t('drawer.language_title')}
+      subtitle={t('drawer.language_subtitle')}
     />
   );
 }

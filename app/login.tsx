@@ -1,42 +1,56 @@
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
-import { normalizePhoneDigits, postOtpRequest } from '@/lib/api/auth';
-import { AUTH_USER_TYPE, DEFAULT_COUNTRY_CODE } from '@/lib/config';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { FormField } from "@/components/ui/FormField";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { Colors, Radius, Shadows, Spacing, Type } from "@/constants/theme";
+import { normalizePhoneDigits, postOtpRequest } from "@/lib/api/auth";
+import { AUTH_USER_TYPE, DEFAULT_COUNTRY_CODE } from "@/lib/config";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [phone, setPhone] = useState('');
+  const { t } = useTranslation();
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [shakeTrigger, setShakeTrigger] = useState(0);
+  const inputRef = useRef<TextInput | null>(null);
+
+  useEffect(() => {
+    if (phone.length === 10) {
+      inputRef.current?.blur();
+    }
+  }, [phone]);
 
   const onLogin = async () => {
     const digits = normalizePhoneDigits(phone);
     if (digits.length !== 10) {
-      Alert.alert('Invalid number', 'Enter a valid 10-digit Indian mobile number.');
+      setError(t("auth.login.invalid_mobile"));
+      setShakeTrigger((n) => n + 1);
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       const res = await postOtpRequest({
         user_type: AUTH_USER_TYPE,
         countryCode: DEFAULT_COUNTRY_CODE,
         phoneNumber: digits,
       });
-      const expiresIn = typeof res.expires_in === 'number' ? res.expires_in : 300;
+      const expiresIn =
+        typeof res.expires_in === "number" ? res.expires_in : 300;
       router.push({
-        pathname: '/verify-otp',
+        pathname: "/verify-otp",
         params: {
           phone: digits,
           countryCode: DEFAULT_COUNTRY_CODE,
@@ -44,10 +58,18 @@ export default function LoginScreen() {
         },
       });
     } catch (e) {
-      Alert.alert('Could not send OTP', e instanceof Error ? e.message : 'Please try again.');
+      void e;
+      setError(t("errors.try_again"));
+      setShakeTrigger((n) => n + 1);
     } finally {
       setLoading(false);
     }
+  };
+
+  const onChangePhone = (text: string) => {
+    const digits = normalizePhoneDigits(text);
+    setPhone(digits);
+    if (error) setError(null);
   };
 
   return (
@@ -59,47 +81,72 @@ export default function LoginScreen() {
         style={styles.back}
         hitSlop={12}
       >
-        <Ionicons name="chevron-back" size={26} color={Colors.text} />
+        <Ionicons name="chevron-back" size={26} color={Colors.primary} />
       </Pressable>
       <View style={styles.hairline} />
 
       <View style={styles.hero}>
         <View style={styles.phoneWrap}>
-          <Ionicons name="phone-portrait-outline" size={32} color={Colors.primaryDark} />
+          <Ionicons
+            name="phone-portrait-outline"
+            size={32}
+            color={Colors.primaryDark}
+          />
         </View>
-        <Text style={styles.title}>Welcome, Partner!</Text>
-        <Text style={styles.subtitle}>Enter your mobile number to get started</Text>
+        <Text style={styles.title}>{t("auth.login.title")}</Text>
+        <Text style={styles.subtitle}>{t("auth.login.subtitle")}</Text>
       </View>
 
-      <Text style={styles.label}>Mobile Number</Text>
-      <View style={styles.phoneRow}>
-        <View style={styles.cc}>
-          <Text style={styles.ccText}>IN +91</Text>
-        </View>
-        <TextInput
-          style={styles.input}
-          placeholder="99999 88888"
-          placeholderTextColor={Colors.textMuted}
-          keyboardType="phone-pad"
-          maxLength={12}
-          value={phone}
-          onChangeText={setPhone}
-          editable={!loading}
-        />
+      <View style={{ marginTop: Spacing.xl }}>
+        <FormField
+          label={t("auth.login.mobile_label")}
+          hasError={!!error}
+          error={error}
+          shakeTrigger={shakeTrigger}
+          shakeDurationMs={420}
+        >
+          <View style={styles.phoneRow}>
+            <View style={styles.cc}>
+              <Text style={styles.ccText}>IN +91</Text>
+            </View>
+            <TextInput
+              ref={(r) => {
+                inputRef.current = r;
+              }}
+              style={styles.input}
+              placeholder={t("auth.login.mobile_placeholder")}
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={10}
+              value={phone}
+              onChangeText={onChangePhone}
+              editable={!loading}
+              returnKeyType="done"
+            />
+          </View>
+        </FormField>
       </View>
 
       <View style={{ flex: 1 }} />
 
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <PrimaryButton title="Login" loading={loading} onPress={() => void onLogin()} />
+      <View
+        style={[styles.bottom, { paddingBottom: insets.bottom + Spacing.md }]}
+      >
+        <PrimaryButton
+          title={t("common.login")}
+          loading={loading}
+          onPress={() => void onLogin()}
+        />
         <Text style={styles.legal}>
-          By clicking Login, you agree to our{' '}
-          <Text style={styles.link}>Terms and Conditions</Text>,{' '}
-          <Text style={styles.link}>Privacy Policy</Text> and{' '}
-          <Text style={styles.link}>TDS Declaration</Text>
+          {t("auth.login.terms_prefix")}{" "}
+          <Text style={styles.link}>{t("auth.login.terms")}</Text>,{" "}
+          <Text style={styles.link}>{t("auth.login.privacy")}</Text>{" "}
+          {t("common.and")}{" "}
+          <Text style={styles.link}>{t("auth.login.tds")}</Text>
         </Text>
         <Text style={styles.help}>
-          Need help? <Text style={styles.link}>Contact Support</Text>
+          {t("auth.login.need_help")}{" "}
+          <Text style={styles.link}>{t("auth.login.contact_support")}</Text>
         </Text>
       </View>
     </View>
@@ -112,69 +159,64 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.lg,
   },
-  back: { alignSelf: 'flex-start', marginBottom: Spacing.sm },
+  back: { alignSelf: "flex-start", marginBottom: Spacing.sm },
   hairline: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: Colors.border,
     marginBottom: Spacing.md,
   },
-  hero: { alignItems: 'center', marginTop: Spacing.sm },
+  hero: { alignItems: "center", marginTop: Spacing.sm },
   phoneWrap: {
     width: 72,
     height: 72,
     borderRadius: Radius.lg,
     backgroundColor: Colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.lg,
     ...Shadows.floatSm,
   },
-  title: { ...Type.h1, textAlign: 'center' },
+  title: { ...Type.h1, textAlign: "center" },
   subtitle: {
     marginTop: Spacing.sm,
     fontSize: 15,
     color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  label: {
-    marginTop: Spacing.xl,
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
+    textAlign: "center",
   },
   phoneRow: {
-    flexDirection: 'row',
-    marginTop: Spacing.sm,
+    flexDirection: "row",
     gap: Spacing.sm,
+    padding: Spacing.sm,
+    alignItems: "center",
   },
   cc: {
     paddingHorizontal: Spacing.md,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    minHeight: 52,
+    justifyContent: "center",
+    borderRadius: Radius.sm,
+    minHeight: 48,
     backgroundColor: Colors.surface,
   },
-  ccText: { fontWeight: '600', color: Colors.text },
+  ccText: { fontWeight: "600", color: Colors.text },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
+    borderWidth: 0,
     paddingHorizontal: Spacing.md,
     fontSize: 17,
     color: Colors.text,
-    minHeight: 52,
-    backgroundColor: Colors.surfaceElevated,
+    minHeight: 48,
+    backgroundColor: "transparent",
   },
   bottom: { gap: Spacing.md },
   legal: {
     fontSize: 12,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
   },
-  link: { color: Colors.link, textDecorationLine: 'underline', fontWeight: '600' },
-  help: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  link: {
+    color: Colors.link,
+    textDecorationLine: "underline",
+    fontWeight: "600",
+  },
+  help: { fontSize: 13, color: Colors.textSecondary, textAlign: "center" },
 });

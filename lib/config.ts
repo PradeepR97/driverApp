@@ -20,31 +20,34 @@
  *
  * Authenticated routes: set Bearer token after verify (axios client in `lib/api/client.ts`).
  */
-export const API_BASE_URL =
-  (
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) ||
-    'https://api.example.com/api/v1'
-  ).trim();
+export const API_BASE_URL = (
+  (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
+  "https://13.234.17.244/api/v1"
+).trim();
 
-export const AUTH_USER_TYPE = 'DRIVER' as const;
-export const DEFAULT_COUNTRY_CODE = '+91';
+export const AUTH_USER_TYPE = "DRIVER" as const;
+export const DEFAULT_COUNTRY_CODE = "+91";
 
 /** Override if backend path differs. */
 export const USERS_LANGUAGE_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USERS_LANGUAGE_PATH) ||
-  '/users/language';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_USERS_LANGUAGE_PATH) ||
+  "/users/language";
 
 export const APP_STATE_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_APP_STATE_PATH?.trim()) ||
-  '/app/state';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_APP_STATE_PATH?.trim()) ||
+  "/app/state";
 
 export const META_OPTIONS_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_META_OPTIONS_PATH?.trim()) ||
-  '/meta/options';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_META_OPTIONS_PATH?.trim()) ||
+  "/meta/options";
 
 export const AUTH_LOGOUT_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_AUTH_LOGOUT_PATH?.trim()) ||
-  '/auth/logout';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_AUTH_LOGOUT_PATH?.trim()) ||
+  "/auth/logout";
 
 /**
  * Driver WebSocket — same host/port as `EXPO_PUBLIC_API_URL`, but path is at **server root**
@@ -56,7 +59,7 @@ export const AUTH_LOGOUT_PATH =
  * - `EXPO_PUBLIC_WS_PATH` — when `WS_URL` is unset: path only (default `/ws/driver/location`).
  *   Use `/ws/driver` for presence-only (no LOCATION frames).
  */
-const WS_PATH_DEFAULT = '/ws/driver/location';
+const WS_PATH_DEFAULT = "/ws/driver/location";
 
 export type DriverWebSocketConnection = {
   url: string;
@@ -66,45 +69,66 @@ export type DriverWebSocketConnection = {
 /** Strip trailing `/api/vN` from REST base pathname so `/ws/*` is at root. */
 function websocketBaseUrlFromApiBase(): string | null {
   try {
-    const raw = API_BASE_URL.startsWith('http') ? API_BASE_URL : `https://${API_BASE_URL}`;
+    const raw = API_BASE_URL.startsWith("https")
+      ? API_BASE_URL
+      : `https://${API_BASE_URL}`;
     const u = new URL(raw);
-    u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
-    let pathPrefix = u.pathname.replace(/\/$/, '');
-    pathPrefix = pathPrefix.replace(/\/api\/v\d+$/i, '');
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    let pathPrefix = u.pathname.replace(/\/$/, "");
+    pathPrefix = pathPrefix.replace(/\/api\/v\d+$/i, "");
     const wsPath =
-      (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_WS_PATH?.trim()) || WS_PATH_DEFAULT;
-    const seg = wsPath.startsWith('/') ? wsPath : `/${wsPath}`;
-    u.pathname = pathPrefix && pathPrefix !== '/' ? `${pathPrefix}${seg}` : seg;
-    u.search = '';
+      (typeof process !== "undefined" &&
+        process.env?.EXPO_PUBLIC_WS_PATH?.trim()) ||
+      WS_PATH_DEFAULT;
+    const seg = wsPath.startsWith("/") ? wsPath : `/${wsPath}`;
+    u.pathname = pathPrefix && pathPrefix !== "/" ? `${pathPrefix}${seg}` : seg;
+    u.search = "";
     return u.toString();
   } catch {
     return null;
   }
 }
 
-export function buildDriverWebSocketConnection(accessToken: string): DriverWebSocketConnection | null {
+export function buildDriverWebSocketConnection(
+  accessToken: string,
+): DriverWebSocketConnection | null {
   const bearerToken = accessToken.trim();
   if (!bearerToken) return null;
 
   const explicit =
-    typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_WS_URL?.trim() ?? '' : '';
+    typeof process !== "undefined"
+      ? (process.env?.EXPO_PUBLIC_WS_URL?.trim() ?? "")
+      : "";
   if (explicit) {
-    const url = explicit.includes('{{token}}')
-      ? explicit.split('{{token}}').join(encodeURIComponent(bearerToken))
+    const url = explicit.includes("{{token}}")
+      ? explicit.split("{{token}}").join(encodeURIComponent(bearerToken))
       : explicit;
     return { url, bearerToken };
   }
 
   const url = websocketBaseUrlFromApiBase();
-  if (!url) return null;
+  if (!url) {
+    if (__DEV__) {
+      console.warn(
+        "[driver-ws] could not derive WebSocket URL from API_BASE_URL:",
+        API_BASE_URL,
+        "— set EXPO_PUBLIC_WS_URL or fix EXPO_PUBLIC_API_URL",
+      );
+    }
+    return null;
+  }
   return { url, bearerToken };
 }
 
 /** First message after socket open; template may include `{{token}}`. */
-export function formatWsConnectMessage(accessToken: string | null): string | null {
+export function formatWsConnectMessage(
+  accessToken: string | null,
+): string | null {
   if (!accessToken?.trim()) return null;
   const template =
-    typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_WS_CONNECT_MESSAGE?.trim() : '';
+    typeof process !== "undefined"
+      ? process.env?.EXPO_PUBLIC_WS_CONNECT_MESSAGE?.trim()
+      : "";
   if (!template) return null;
   return template.replace(/\{\{token\}\}/g, accessToken);
 }
@@ -112,7 +136,9 @@ export function formatWsConnectMessage(accessToken: string | null): string | nul
 /** How often to push LOCATION to `/ws/driver/location` while online (ms). Default 30s per backend note. */
 export const DRIVER_LOCATION_PUSH_INTERVAL_MS = (() => {
   const raw =
-    typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_DRIVER_LOCATION_INTERVAL_MS : undefined;
+    typeof process !== "undefined"
+      ? process.env?.EXPO_PUBLIC_DRIVER_LOCATION_INTERVAL_MS
+      : undefined;
   const n = Number(raw);
   if (Number.isFinite(n) && n >= 1_000 && n <= 120_000) {
     return Math.floor(n);
@@ -130,7 +156,7 @@ export type DirectS3Config = {
   /** If set (e.g. CloudFront), used to build the URL returned to your API */
   publicBaseOverride: string | null;
   /** Set `public-read` only if bucket allows ACLs */
-  objectAcl: 'public-read' | undefined;
+  objectAcl: "public-read" | undefined;
 };
 
 /**
@@ -138,28 +164,40 @@ export type DirectS3Config = {
  */
 export function getDirectS3ClientConfig(): DirectS3Config {
   const region =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_AWS_REGION?.trim()) || 'ap-south-1';
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_AWS_REGION?.trim()) ||
+    "ap-south-1";
   const accessKeyId =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_AWS_ACCESS_KEY_ID?.trim()) || '';
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_AWS_ACCESS_KEY_ID?.trim()) ||
+    "";
   const secretAccessKey =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY?.trim()) || '';
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY?.trim()) ||
+    "";
   const bucket =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_S3_BUCKET_NAME?.trim()) || '';
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_S3_BUCKET_NAME?.trim()) ||
+    "fleet-services-app";
   const objectKeyPrefix =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_S3_UPLOAD_PREFIX?.trim()) ||
-    'driver';
-    
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_S3_UPLOAD_PREFIX?.trim()) ||
+    "driver";
+
   const publicBaseOverride =
-    (typeof process !== 'undefined' &&
-      process.env?.EXPO_PUBLIC_S3_PUBLIC_BASE_URL?.replace(/\/$/, '').trim()) ||
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_S3_PUBLIC_BASE_URL?.replace(/\/$/, "").trim()) ||
     null;
   const aclRaw =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_S3_OBJECT_ACL?.trim()) || '';
-  const objectAcl = aclRaw === 'public-read' ? ('public-read' as const) : undefined;
+    (typeof process !== "undefined" &&
+      process.env?.EXPO_PUBLIC_S3_OBJECT_ACL?.trim()) ||
+    "";
+  const objectAcl =
+    aclRaw === "public-read" ? ("public-read" as const) : undefined;
 
   if (!region || !accessKeyId || !secretAccessKey || !bucket) {
     throw new Error(
-      'S3 upload: set EXPO_PUBLIC_AWS_REGION, EXPO_PUBLIC_AWS_ACCESS_KEY_ID, EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY, EXPO_PUBLIC_S3_BUCKET_NAME in .env',
+      "S3 upload: set EXPO_PUBLIC_AWS_REGION, EXPO_PUBLIC_AWS_ACCESS_KEY_ID, EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY, EXPO_PUBLIC_S3_BUCKET_NAME in .env",
     );
   }
 
@@ -176,7 +214,7 @@ export function getDirectS3ClientConfig(): DirectS3Config {
 
 /** Public URL string stored in your backend after upload. */
 export function publicUrlForS3Key(cfg: DirectS3Config, key: string): string {
-  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
   if (cfg.publicBaseOverride) {
     return `${cfg.publicBaseOverride}/${encodedKey}`;
   }
@@ -184,23 +222,29 @@ export function publicUrlForS3Key(cfg: DirectS3Config, key: string): string {
 }
 
 export const ONBOARDING_OWNER_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_ONBOARDING_OWNER_PATH) ||
-  '/onboarding/owner';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_ONBOARDING_OWNER_PATH) ||
+  "/onboarding/owner";
 
 export const ONBOARDING_VEHICLE_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_ONBOARDING_VEHICLE_PATH) ||
-  '/onboarding/vehicle';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_ONBOARDING_VEHICLE_PATH) ||
+  "/onboarding/vehicle";
 
 export const ONBOARDING_DRIVER_PATH =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_ONBOARDING_DRIVER_PATH) ||
-  '/onboarding/driver';
+  (typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_ONBOARDING_DRIVER_PATH) ||
+  "/onboarding/driver";
 
 /**
  * OTP length for the verify screen (match backend / `Verify Otp.pdf`).
  * Override with `EXPO_PUBLIC_OTP_DIGITS` (4–8).
  */
 export const OTP_DIGIT_COUNT = (() => {
-  const raw = typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_OTP_DIGITS : undefined;
+  const raw =
+    typeof process !== "undefined"
+      ? process.env?.EXPO_PUBLIC_OTP_DIGITS
+      : undefined;
   const n = Number(raw);
   if (Number.isFinite(n) && n >= 4 && n <= 8) return Math.floor(n);
   return 4;

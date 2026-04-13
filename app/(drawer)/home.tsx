@@ -1,15 +1,27 @@
-import { MapGridBackground } from '@/components/MapGridBackground';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
-import { postAcceptDriverOrder, postDeclineDriverOrder } from '@/lib/api/driver-orders';
-import { mockTripFromNewOrder, useDriverStore } from '@/lib/driver-store';
-import { useDriverOnlineWebSocket } from '@/lib/hooks/useDriverOnlineWebSocket';
-import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { MapGridBackground } from "@/components/MapGridBackground";
+import { FormErrorText } from "@/components/ui/FormErrorText";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { SwipeButton } from "@/components/ui/SwipeButton";
+import { AnimDuration } from "@/constants/animations";
+import { Colors, Radius, Shadows, Spacing } from "@/constants/theme";
+import { getDriverHomeSummary } from "@/lib/api/driver-home";
 import {
-    Alert,
+    postAcceptDriverOrder,
+    postDeclineDriverOrder,
+} from "@/lib/api/driver-orders";
+import { mockTripFromNewOrder, useDriverStore } from "@/lib/driver-store";
+import { useDriverOnlineWebSocket } from "@/lib/hooks/useDriverOnlineWebSocket";
+import { useShakeAnimation } from "@/lib/hooks/useShakeAnimation";
+import { Ionicons } from "@expo/vector-icons";
+import {
+    DrawerActions,
+    useFocusEffect,
+    useNavigation,
+} from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
     Animated,
     Easing,
     Modal,
@@ -17,14 +29,15 @@ import {
     StyleSheet,
     Text,
     View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useShallow } from 'zustand/react/shallow';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useShallow } from "zustand/react/shallow";
 
 export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const {
     isOnline,
     setOnline,
@@ -35,9 +48,15 @@ export default function HomeScreen() {
     distanceKm,
     setActiveTrip,
     setTripPhase,
+    setTripStatus,
     driverSocketStatus,
     pendingNewOrder,
     setPendingNewOrder,
+    canGoOnline,
+    homeBlock,
+    homeSummaryLoading,
+    setHomeSummaryLoading,
+    applyHomeSummary,
   } = useDriverStore(
     useShallow((s) => ({
       isOnline: s.isOnline,
@@ -49,9 +68,15 @@ export default function HomeScreen() {
       distanceKm: s.distanceKm,
       setActiveTrip: s.setActiveTrip,
       setTripPhase: s.setTripPhase,
+      setTripStatus: s.setTripStatus,
       driverSocketStatus: s.driverSocketStatus,
       pendingNewOrder: s.pendingNewOrder,
       setPendingNewOrder: s.setPendingNewOrder,
+      canGoOnline: s.canGoOnline,
+      homeBlock: s.homeBlock,
+      homeSummaryLoading: s.homeSummaryLoading,
+      setHomeSummaryLoading: s.setHomeSummaryLoading,
+      applyHomeSummary: s.applyHomeSummary,
     })),
   );
 
@@ -61,19 +86,114 @@ export default function HomeScreen() {
   const [showOffer, setShowOffer] = useState(false);
   const [offerSeconds, setOfferSeconds] = useState(30);
   const [offerBusy, setOfferBusy] = useState(false);
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [offerError, setOfferError] = useState<string | null>(null);
+  const [homeError, setHomeError] = useState<string | null>(null);
+  const offerShake = useShakeAnimation({ durationMs: 380, amplitude: 10 });
+  const searchWave = useRef(new Animated.Value(0)).current;
+  const shimmerPhase = useRef(new Animated.Value(0)).current;
+  const bottomPanelOpacity = useRef(new Animated.Value(1)).current;
+  const prevOnlineRef = useRef(isOnline);
+  const livePulse = useRef(new Animated.Value(1)).current;
+
+  const loadHomeSummary = useCallback(async () => {
+    setHomeSummaryLoading(true);
+    setHomeError(null);
+    try {
+      const data = await getDriverHomeSummary();
+      applyHomeSummary(data);
+    } catch (e) {
+      setHomeError(
+        e instanceof Error ? e.message : "Could not load home summary.",
+      );
+    } finally {
+      setHomeSummaryLoading(false);
+    }
+  }, [applyHomeSummary, setHomeSummaryLoading]);
 
   useEffect(() => {
-    if (!searching) return;
-    const loop = Animated.loop(
+    void loadHomeSummary();
+  }, [loadHomeSummary]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadHomeSummary();
+    }, [loadHomeSummary]),
+  );
+
+  useEffect(() => {
+    if (!isOnline || driverSocketStatus !== "connected") {
+      livePulse.setValue(1);
+      return;
+    }
+    const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 1200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.timing(livePulse, {
+          toValue: 0.55,
+          duration: 950,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(livePulse, {
+          toValue: 1,
+          duration: 950,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
       ]),
     );
-    loop.start();
-    return () => loop.stop();
-  }, [searching, pulse]);
+    pulse.start();
+    return () => pulse.stop();
+  }, [isOnline, driverSocketStatus, livePulse]);
+
+  useEffect(() => {
+    if (!searching) {
+      searchWave.setValue(0);
+      shimmerPhase.setValue(0);
+      return;
+    }
+    const wave = Animated.loop(
+      Animated.sequence([
+        Animated.timing(searchWave, {
+          toValue: 1,
+          duration: 1100,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(searchWave, {
+          toValue: 0,
+          duration: 1100,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const shimmer = Animated.loop(
+      Animated.timing(shimmerPhase, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    wave.start();
+    shimmer.start();
+    return () => {
+      wave.stop();
+      shimmer.stop();
+    };
+  }, [searching, searchWave, shimmerPhase]);
+
+  useEffect(() => {
+    if (prevOnlineRef.current === isOnline) return;
+    prevOnlineRef.current = isOnline;
+    bottomPanelOpacity.setValue(0.86);
+    Animated.timing(bottomPanelOpacity, {
+      toValue: 1,
+      duration: AnimDuration.homePanelCrossfadeMs,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [isOnline, bottomPanelOpacity]);
 
   useEffect(() => {
     if (pendingNewOrder && isOnline && !activeTrip) {
@@ -128,10 +248,27 @@ export default function HomeScreen() {
     return () => clearInterval(id);
   }, [showOffer]);
 
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.15] });
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.8] });
+  const ringOpacity = searchWave.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.28, 0.62],
+  });
+  const corePulse = searchWave.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.88, 1],
+  });
+  const labelOpacity = searchWave.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.55, 1],
+  });
+  const shimmerX = shimmerPhase.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-140, 220],
+  });
 
   const goOnline = () => {
+    if (!canGoOnline) {
+      return;
+    }
     setOnline(true);
     setSearching(false);
     setShowOffer(false);
@@ -150,13 +287,18 @@ export default function HomeScreen() {
     try {
       await postAcceptDriverOrder(pendingNewOrder.orderId);
       setActiveTrip(mockTripFromNewOrder(pendingNewOrder));
-      setTripPhase('to_pickup');
+      setTripPhase("to_pickup");
+      setTripStatus("ASSIGNED");
       setPendingNewOrder(null);
       setShowOffer(false);
       setSearching(false);
-      router.push('/active-trip');
+      setOfferError(null);
+      offerShake.reset();
+      router.push("/active-trip");
     } catch (e) {
-      Alert.alert('Could not accept', e instanceof Error ? e.message : 'Try again.');
+      void e;
+      setOfferError(t("errors.could_not_accept_order"));
+      offerShake.shake();
     } finally {
       setOfferBusy(false);
     }
@@ -167,8 +309,12 @@ export default function HomeScreen() {
     setOfferBusy(true);
     try {
       await postDeclineDriverOrder(pendingNewOrder.orderId);
+      setOfferError(null);
+      offerShake.reset();
     } catch (e) {
-      Alert.alert('Could not decline', e instanceof Error ? e.message : 'Try again.');
+      void e;
+      setOfferError(t("errors.could_not_decline_order"));
+      offerShake.shake();
     } finally {
       setPendingNewOrder(null);
       setShowOffer(false);
@@ -179,6 +325,15 @@ export default function HomeScreen() {
 
   const openDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
+  };
+
+  const onBlockBannerPress = () => {
+    if (!homeBlock) return;
+    if (homeBlock.redirectTo === "WALLET") {
+      router.push("/bank-details");
+      return;
+    }
+    router.push("/onboarding/owner");
   };
 
   return (
@@ -193,92 +348,199 @@ export default function HomeScreen() {
         <Ionicons name="menu" size={22} color={Colors.text} />
       </Pressable>
 
+      {homeBlock ? (
+        <Pressable
+          style={[styles.blockBanner, { top: insets.top + 48 }]}
+          onPress={onBlockBannerPress}
+        >
+          <Ionicons name="alert-circle" size={18} color={Colors.warning} />
+          <Text style={styles.blockText}>{homeBlock.message}</Text>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={Colors.textSecondary}
+          />
+        </Pressable>
+      ) : null}
+
       {!isOnline ? (
-        <View style={[styles.summaryWrap, { top: insets.top + 88 }]}>
+        <View
+          style={[
+            styles.summaryWrap,
+            { top: insets.top + (homeBlock ? 138 : 88) },
+          ]}
+        >
           <Text style={styles.summaryTitle}>Today&apos;s Summary</Text>
           <View style={styles.grid}>
-            <SummaryTile icon="₹" label="Earnings" value={`₹${todayEarnings.toLocaleString('en-IN')}`} highlight />
-            <SummaryTile icon="car-outline" label="Trips" value={String(todayTrips)} ion />
-            <SummaryTile icon="time-outline" label="Hours Online" value={hoursOnline} ion />
-            <SummaryTile icon="navigate-outline" label="Distance" value={distanceKm} ion />
+            <SummaryTile
+              icon="₹"
+              label="Earnings"
+              value={`₹${todayEarnings.toLocaleString("en-IN")}`}
+              highlight
+            />
+            <SummaryTile
+              icon="car-outline"
+              label="Trips"
+              value={String(todayTrips)}
+              ion
+            />
+            <SummaryTile
+              icon="time-outline"
+              label="Hours Online"
+              value={hoursOnline}
+              ion
+            />
+            <SummaryTile
+              icon="navigate-outline"
+              label="Distance"
+              value={distanceKm}
+              ion
+            />
           </View>
+          <FormErrorText error={homeError} />
         </View>
       ) : (
-        <View style={[styles.compactCard, { top: insets.top + 88 }]}>
+        <View
+          style={[
+            styles.compactCard,
+            { top: insets.top + (homeBlock ? 138 : 88) },
+          ]}
+        >
           <View style={styles.compactLeft}>
             <View style={styles.miniIcon}>
               <Text style={styles.rupee}>₹</Text>
             </View>
             <View>
               <Text style={styles.compactLabel}>Today</Text>
-              <Text style={styles.compactValue}>₹{todayEarnings.toLocaleString('en-IN')}</Text>
+              <Text style={styles.compactValue}>
+                ₹{todayEarnings.toLocaleString("en-IN")}
+              </Text>
             </View>
           </View>
           <View style={styles.compactRight}>
             <View style={styles.miniIcon}>
-              <Ionicons name="car-outline" size={18} color={Colors.primaryDark} />
+              <Ionicons
+                name="car-outline"
+                size={18}
+                color={Colors.primaryDark}
+              />
             </View>
             <View>
               <Text style={styles.compactLabel}>Trips</Text>
               <Text style={styles.compactValue}>{todayTrips}</Text>
             </View>
           </View>
+          <FormErrorText error={homeError} />
         </View>
       )}
 
       {isOnline && searching && !showOffer && (
-        <View style={styles.radarWrap}>
+        <View style={styles.searchingWrap} pointerEvents="none">
           <Animated.View
-            style={[styles.radarRing, styles.radarRing3, { transform: [{ scale }], opacity }]}
+            style={[
+              styles.searchRing,
+              styles.searchRingOuter,
+              { opacity: ringOpacity },
+            ]}
           />
           <Animated.View
-            style={[styles.radarRing, styles.radarRing2, { transform: [{ scale }], opacity }]}
+            style={[
+              styles.searchRing,
+              styles.searchRingMid,
+              { opacity: ringOpacity },
+            ]}
           />
-          <Animated.View style={[styles.radarRing, { transform: [{ scale }], opacity }]} />
-          <View style={styles.radarCore}>
-            <Ionicons name="time-outline" size={26} color="#fff" />
+          <Animated.View
+            style={[
+              styles.searchRing,
+              styles.searchRingInner,
+              { opacity: ringOpacity },
+            ]}
+          />
+          <Animated.View style={[styles.radarCore, { opacity: corePulse }]}>
+            <Ionicons name="time-outline" size={26} color={Colors.white} />
+          </Animated.View>
+          <Animated.Text
+            style={[styles.searchingText, { opacity: labelOpacity }]}
+          >
+            Searching for orders nearby...
+          </Animated.Text>
+          <View style={styles.shimmerTrack}>
+            <Animated.View
+              style={[
+                styles.shimmerBar,
+                { transform: [{ translateX: shimmerX }] },
+              ]}
+            />
           </View>
-          <Text style={styles.searchingText}>Searching for orders...</Text>
         </View>
       )}
 
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + Spacing.lg }]}>
+      <Animated.View
+        style={[
+          styles.bottom,
+          {
+            paddingBottom: insets.bottom + Spacing.lg,
+            opacity: bottomPanelOpacity,
+          },
+        ]}
+      >
         {!isOnline ? (
           <>
             <Text style={styles.offlineLabel}>You are Offline</Text>
-            <Pressable style={styles.goOnline} onPress={goOnline}>
-              <View style={styles.goOnlineIcon}>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </View>
-              <Text style={styles.goOnlineText}>Go online</Text>
-            </Pressable>
+            <SwipeButton
+              key="slider-go-online"
+              label={
+                homeSummaryLoading
+                  ? "Loading summary..."
+                  : canGoOnline
+                    ? "Swipe to go online"
+                    : "Go online unavailable"
+              }
+              onComplete={goOnline}
+              disabled={!canGoOnline || homeSummaryLoading}
+            />
           </>
         ) : (
           <>
             <View style={styles.onlineLabelRow}>
               <Text style={styles.onlineLabel}>You are Online</Text>
-              {driverSocketStatus === 'connected' ? (
-                <Text style={styles.socketLive}>● Live</Text>
-              ) : driverSocketStatus === 'connecting' || driverSocketStatus === 'reconnecting' ? (
+              {driverSocketStatus === "connected" ? (
+                <Animated.Text
+                  style={[styles.socketLive, { opacity: livePulse }]}
+                >
+                  {" "}
+                  • Live
+                </Animated.Text>
+              ) : driverSocketStatus === "connecting" ||
+                driverSocketStatus === "reconnecting" ? (
                 <Text style={styles.socketPending}>Connecting…</Text>
-              ) : driverSocketStatus === 'error' ? (
+              ) : driverSocketStatus === "error" ? (
                 <Text style={styles.socketError}>Connection issue</Text>
               ) : null}
             </View>
-            <Pressable style={styles.goOffline} onPress={goOffline}>
-              <View style={styles.goOfflineIcon}>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </View>
-              <Text style={styles.goOfflineText}>Go offline</Text>
-            </Pressable>
+            <SwipeButton
+              key="slider-go-offline"
+              label="Swipe to go offline"
+              variant="offline"
+              onComplete={goOffline}
+            />
           </>
         )}
-      </View>
+      </Animated.View>
 
-      <Modal visible={showOffer && !!pendingNewOrder} transparent animationType="slide">
+      <Modal
+        visible={showOffer && !!pendingNewOrder}
+        transparent
+        animationType="slide"
+      >
         <View style={styles.offerBackdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => void decline()} disabled={offerBusy} />
-          <View style={styles.offerSheet}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => void decline()}
+            disabled={offerBusy}
+          />
+          <Animated.View style={[styles.offerSheet, offerShake.style]}>
             <View style={styles.offerHeader}>
               <Text style={styles.offerTitle}>New Order!</Text>
               <View style={styles.timerBadge}>
@@ -287,8 +549,14 @@ export default function HomeScreen() {
             </View>
             {pendingNewOrder?.helperRequired ? (
               <View style={styles.warnBanner}>
-                <Ionicons name="warning" size={18} color={Colors.helperBannerText} />
-                <Text style={styles.warnText}>Helper required — loading assistance</Text>
+                <Ionicons
+                  name="warning"
+                  size={18}
+                  color={Colors.helperBannerText}
+                />
+                <Text style={styles.warnText}>
+                  Helper required — loading assistance
+                </Text>
               </View>
             ) : null}
             <View style={styles.route}>
@@ -298,7 +566,9 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.routeLabel}>PICKUP</Text>
-                  <Text style={styles.routePlace}>{pendingNewOrder?.pickup ?? '—'}</Text>
+                  <Text style={styles.routePlace}>
+                    {pendingNewOrder?.pickup ?? "—"}
+                  </Text>
                 </View>
               </View>
               <View style={styles.dotted} />
@@ -308,22 +578,32 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.routeLabel}>DROP</Text>
-                  <Text style={styles.routePlace}>{pendingNewOrder?.drop ?? '—'}</Text>
+                  <Text style={styles.routePlace}>
+                    {pendingNewOrder?.drop ?? "—"}
+                  </Text>
                   <Text style={styles.routeMeta}>
-                    ~{pendingNewOrder?.distanceKm?.toFixed(1) ?? '—'} km trip
+                    ~{pendingNewOrder?.distanceKm?.toFixed(1) ?? "—"} km trip
                   </Text>
                 </View>
               </View>
             </View>
             {pendingNewOrder?.customerName ? (
-              <Text style={styles.customerName}>Customer: {pendingNewOrder.customerName}</Text>
+              <Text style={styles.customerName}>
+                Customer: {pendingNewOrder.customerName}
+              </Text>
             ) : null}
             <View style={styles.fareBar}>
               <Text style={styles.fareLabel}>Estimated fare</Text>
               <Text style={styles.fareAmt}>
-                ₹{pendingNewOrder ? Math.round(pendingNewOrder.estimatedFare).toLocaleString('en-IN') : '—'}
+                ₹
+                {pendingNewOrder
+                  ? Math.round(pendingNewOrder.estimatedFare).toLocaleString(
+                      "en-IN",
+                    )
+                  : "—"}
               </Text>
             </View>
+            {offerError ? <FormErrorText error={offerError} /> : null}
             <View style={styles.offerActions}>
               <PrimaryButton
                 title="Decline"
@@ -340,7 +620,7 @@ export default function HomeScreen() {
                 disabled={offerBusy}
               />
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </View>
@@ -363,7 +643,11 @@ function SummaryTile({
   return (
     <View style={[styles.tile, highlight && styles.tileHighlight]}>
       {ion ? (
-        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={18} color={Colors.textSecondary} />
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={18}
+          color={Colors.textSecondary}
+        />
       ) : (
         <Text style={styles.tileRupee}>{icon}</Text>
       )}
@@ -376,19 +660,41 @@ function SummaryTile({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   menuBtn: {
-    position: 'absolute',
+    position: "absolute",
     left: Spacing.md,
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 2,
     ...Shadows.floatMd,
   },
+  blockBanner: {
+    position: "absolute",
+    left: Spacing.lg,
+    right: Spacing.lg,
+    zIndex: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.warningSoft,
+    borderWidth: 1,
+    borderColor: Colors.warning,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    ...Shadows.floatSm,
+  },
+  blockText: {
+    flex: 1,
+    color: Colors.text,
+    fontSize: 12.5,
+    fontWeight: "600",
+  },
   summaryWrap: {
-    position: 'absolute',
+    position: "absolute",
     left: Spacing.lg,
     right: Spacing.lg,
     backgroundColor: Colors.surfaceElevated,
@@ -397,146 +703,149 @@ const styles = StyleSheet.create({
     zIndex: 1,
     ...Shadows.floatMd,
   },
-  summaryTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: Spacing.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  summaryTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
   tile: {
-    width: '48%',
+    width: "48%",
     flexGrow: 1,
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     padding: Spacing.md,
   },
   tileHighlight: { backgroundColor: Colors.primarySoft },
-  tileRupee: { fontSize: 16, fontWeight: '800', color: Colors.primary },
+  tileRupee: { fontSize: 16, fontWeight: "800", color: Colors.primary },
   tileLabel: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
-  tileValue: { fontSize: 20, fontWeight: '800', color: Colors.text, marginTop: 2 },
+  tileValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.text,
+    marginTop: 2,
+  },
   compactCard: {
-    position: 'absolute',
+    position: "absolute",
     left: Spacing.lg,
     right: Spacing.lg,
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: Colors.surfaceElevated,
     borderRadius: Radius.xxl,
     padding: Spacing.md + 2,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     zIndex: 1,
     ...Shadows.floatMd,
   },
-  compactLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  compactRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  compactLeft: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  compactRight: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
   miniIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  rupee: { fontSize: 18, fontWeight: '800', color: Colors.primaryDark },
+  rupee: { fontSize: 18, fontWeight: "800", color: Colors.primaryDark },
   compactLabel: { fontSize: 12, color: Colors.textSecondary },
-  compactValue: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  radarWrap: {
+  compactValue: { fontSize: 18, fontWeight: "800", color: Colors.text },
+  searchingWrap: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 0,
   },
-  radarRing: {
-    position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+  searchRing: {
+    position: "absolute",
     borderWidth: 2,
-    borderColor: 'rgba(31, 168, 123, 0.35)',
+    borderColor: Colors.mapPulseRing,
   },
-  radarRing2: { width: 220, height: 220, borderRadius: 110 },
-  radarRing3: { width: 280, height: 280, borderRadius: 140, borderWidth: 1 },
+  searchRingInner: {
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+  },
+  searchRingMid: {
+    width: 224,
+    height: 224,
+    borderRadius: 112,
+    borderWidth: 1.5,
+  },
+  searchRingOuter: {
+    width: 288,
+    height: 288,
+    borderRadius: 144,
+    borderWidth: 1,
+  },
   radarCore: {
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...Shadows.floatSm,
   },
-  searchingText: { marginTop: Spacing.lg, fontSize: 16, color: Colors.textSecondary, fontWeight: '600' },
+  searchingText: {
+    marginTop: Spacing.lg,
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingHorizontal: Spacing.lg,
+  },
+  shimmerTrack: {
+    marginTop: Spacing.md,
+    width: 200,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.shimmerBase,
+    overflow: "hidden",
+  },
+  shimmerBar: {
+    width: 72,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.shimmerHighlight,
+  },
   bottom: {
-    position: 'absolute',
+    position: "absolute",
     left: Spacing.lg,
     right: Spacing.lg,
     bottom: 0,
-    alignItems: 'center',
+    alignItems: "stretch",
+    zIndex: 4,
   },
-  offlineLabel: { fontSize: 16, color: Colors.textSecondary, marginBottom: Spacing.md },
-  goOnline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: Colors.primarySoft,
-    borderRadius: Radius.xl,
-    paddingVertical: 6,
-    paddingLeft: 6,
-    paddingRight: Spacing.md,
-    minHeight: 56,
-  },
-  goOnlineIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goOnlineText: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.primary,
+  offlineLabel: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    textAlign: "center",
+    alignSelf: "center",
   },
   onlineLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.sm,
     marginBottom: Spacing.md,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
+    alignSelf: "center",
   },
-  onlineLabel: { fontSize: 16, color: Colors.primary, fontWeight: '700' },
-  socketLive: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  socketPending: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  socketError: { fontSize: 13, fontWeight: '600', color: Colors.danger },
-  goOffline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: Colors.dangerSoft,
-    borderRadius: Radius.xl,
-    paddingVertical: 6,
-    paddingLeft: 6,
-    paddingRight: Spacing.md,
-    minHeight: 56,
+  onlineLabel: { fontSize: 16, color: Colors.primary, fontWeight: "700" },
+  socketLive: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  socketPending: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.textSecondary,
   },
-  goOfflineIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goOfflineText: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.danger,
-  },
+  socketError: { fontSize: 13, fontWeight: "600", color: Colors.danger },
   offerBackdrop: {
     flex: 1,
     backgroundColor: Colors.overlay,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   offerSheet: {
     backgroundColor: Colors.surfaceElevated,
@@ -546,19 +855,23 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
     ...Shadows.sheetTop,
   },
-  offerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  offerTitle: { fontSize: 20, fontWeight: '800', color: Colors.text },
+  offerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  offerTitle: { fontSize: 20, fontWeight: "800", color: Colors.text },
   timerBadge: {
     backgroundColor: Colors.timerPink,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: Radius.full,
   },
-  timerText: { fontWeight: '800', color: Colors.timerRed, fontSize: 13 },
+  timerText: { fontWeight: "800", color: Colors.timerRed, fontSize: 13 },
   warnBanner: {
     marginTop: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
     backgroundColor: Colors.helperBannerBg,
     borderWidth: 1,
@@ -566,21 +879,26 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: Radius.lg,
   },
-  warnText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.helperBannerText },
+  warnText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.helperBannerText,
+  },
   customerName: {
     marginTop: Spacing.md,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textSecondary,
   },
   route: { marginTop: Spacing.lg },
-  routeRow: { flexDirection: 'row', gap: Spacing.md },
+  routeRow: { flexDirection: "row", gap: Spacing.md },
   routeDotOuter: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 4,
   },
   routeDotPickup: { backgroundColor: Colors.primary },
@@ -589,30 +907,34 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.white,
   },
   dotted: {
     width: 2,
     height: 20,
     borderLeftWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: Colors.border,
     marginLeft: 4,
     marginVertical: 4,
   },
-  routeLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '700' },
-  routePlace: { fontSize: 16, fontWeight: '800', color: Colors.text },
+  routeLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: "700" },
+  routePlace: { fontSize: 16, fontWeight: "800", color: Colors.text },
   routeMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
   fareBar: {
     marginTop: Spacing.lg,
     backgroundColor: Colors.primarySoft,
     borderRadius: Radius.lg,
     padding: Spacing.md + 2,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  fareLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600' },
-  fareAmt: { fontSize: 22, fontWeight: '800', color: Colors.primaryDark },
-  offerActions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.lg },
+  fareLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: "600" },
+  fareAmt: { fontSize: 22, fontWeight: "800", color: Colors.primaryDark },
+  offerActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+  },
 });

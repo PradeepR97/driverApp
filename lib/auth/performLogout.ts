@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 
 import { clearAccessTokenFromMemory } from '@/lib/auth-session';
 import { useDriverStore } from '@/lib/driver-store';
+import { applyDeviceLanguageInMemoryOnly } from '@/lib/i18n';
 import { queryClient } from '@/lib/query-client';
 import { logoutUser } from '@/lib/services/authService';
 import { clearAllStorage } from '@/lib/utils/storage';
@@ -41,7 +42,9 @@ export async function performLogout(options: PerformLogoutOptions): Promise<void
     // Still navigate — user must not remain in a half-authenticated UI
   }
 
+  applyDeviceLanguageInMemoryOnly();
+
   onBeforeNavigate?.();
   router.dismissAll();
-  router.replace('/login');
+  router.replace('/');
 }

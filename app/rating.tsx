@@ -1,82 +1,220 @@
+import { FormErrorText } from '@/components/ui/FormErrorText';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { SuccessToast } from '@/components/ui/SuccessToast';
+import { RatingComponent } from '@/components/ui/RatingComponent';
+import { ReasonList } from '@/components/ui/ReasonList';
+import { AnimDuration } from '@/constants/animations';
 import { Colors, Radius, Shadows, Spacing, Type } from '@/constants/theme';
+import { postDriverOrderRating } from '@/lib/api/driver-orders';
+import { MetaCategory, type MetaOptionItem, getMetaOptions } from '@/lib/api/meta';
 import { useDriverStore } from '@/lib/driver-store';
+import { useShakeAnimation } from '@/lib/hooks/useShakeAnimation';
+import { popGlobalLoading, pushGlobalLoading } from '@/lib/stores/app-loading-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  TextInput,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const TAGS = [
-  'Made me wait long',
-  'Rude behavior',
-  'Wrong Location/Address',
-  'Refused to pay / Payment issue',
-  'Demanded extra work',
-];
 
 export default function RatingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const trip = useDriverStore((s) => s.activeTrip);
+
+  useEffect(() => {
+    if (!trip) {
+      router.replace('/home');
+    }
+  }, [trip, router]);
   const endTripSession = useDriverStore((s) => s.endTripSession);
-  const name = trip?.pickupContact ?? 'Priya Sharma';
+  const name = trip?.pickupContact ?? 'Customer';
+  const { t } = useTranslation();
 
-  const [stars, setStars] = useState(3);
+  const [stars, setStars] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [reasonsLoading, setReasonsLoading] = useState(false);
+  const [ratingReasons, setRatingReasons] = useState<MetaOptionItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [starsError, setStarsError] = useState(false);
+  const { style: shakeStyle, shake } = useShakeAnimation({ durationMs: 360, amplitude: 10 });
+  const [complete, setComplete] = useState(false);
+  const checkScale = useRef(new Animated.Value(0)).current;
 
-  const toggle = (t: string) => {
-    setSelected((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
+  useEffect(() => {
+    if (!complete) {
+      checkScale.setValue(0);
+      return;
+    }
+    Animated.spring(checkScale, {
+      toValue: 1,
+      friction: 6,
+      tension: 120,
+      useNativeDriver: true,
+    }).start();
+  }, [complete, checkScale]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setReasonsLoading(true);
+      try {
+        const opts = await getMetaOptions([MetaCategory.RATING_REASON]);
+        if (!cancelled) {
+          setRatingReasons(opts.RATING_REASON ?? []);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Could not load rating reasons.');
+        }
+      } finally {
+        if (!cancelled) setReasonsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggle = (code: string) => {
+    setSelected((s) => (s.includes(code) ? s.filter((x) => x !== code) : [...s, code]));
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (stars < 1) {
+      setStarsError(true);
+      setError('Please select a rating.');
+      shake();
+      return;
+    }
+    if (!trip?.orderId) {
+      setError('Trip is missing order ID. Return home and retry.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    pushGlobalLoading();
+    try {
+      await postDriverOrderRating(trip.orderId, {
+        rating: stars,
+        reasonCodes: stars <= 3 && selected.length ? selected : undefined,
+        feedback: comment.trim() || undefined,
+      });
+      setComplete(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not submit rating.');
+    } finally {
+      popGlobalLoading();
+      setBusy(false);
+    }
+  };
+
+  const onToastDismiss = () => {
     endTripSession();
     router.replace('/home');
   };
+
+  const onSkip = () => {
+    if (busy || complete) return;
+    endTripSession();
+    router.replace('/home');
+  };
+
+  if (!trip) {
+    return null;
+  }
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + Spacing.lg }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={40} color="#6D28D9" />
+          <Ionicons name="person" size={40} color={Colors.primaryDark} />
         </View>
-        <Text style={styles.title}>Rate your experience</Text>
-        <Text style={styles.sub}>How was your delivery with {name}?</Text>
+        <Text style={styles.title}>{t('rating.title')}</Text>
+        <Text style={styles.sub}>{t('rating.subtitle', { name })}</Text>
 
-        <View style={styles.stars}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Animated.View
-              key={i}
-              entering={FadeInDown.delay(48 * (i - 1)).duration(280)}
-            >
-              <Pressable onPress={() => setStars(i)} hitSlop={8}>
-                <Ionicons
-                  name={i <= stars ? 'star' : 'star-outline'}
-                  size={36}
-                  color={i <= stars ? Colors.star : Colors.border}
-                />
-              </Pressable>
-            </Animated.View>
-          ))}
-        </View>
+        <Animated.View style={[shakeStyle, styles.starsWrap, starsError ? styles.starsWrapError : null]}>
+          <RatingComponent
+            value={stars}
+            onChange={(value) => {
+              setStars(value);
+              setStarsError(false);
+              setError(null);
+            }}
+            disabled={complete || busy}
+          />
+        </Animated.View>
 
-        <Text style={styles.tagLabel}>What went wrong?</Text>
-        <View style={styles.tags}>
-          {TAGS.map((t) => {
-            const on = selected.includes(t);
-            return (
-              <Pressable key={t} onPress={() => toggle(t)} style={[styles.chip, on && styles.chipOn]}>
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{t}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {stars > 0 && stars <= 3 ? (
+          <>
+            <Text style={styles.tagLabel}>Select Reason</Text>
+            {reasonsLoading ? (
+              <Text style={styles.loadText}>Loading reasons...</Text>
+            ) : (
+              <ReasonList
+                options={ratingReasons}
+                selectedCodes={selected}
+                onToggle={toggle}
+                multi
+              />
+            )}
+          </>
+        ) : null}
+        <TextInput
+          value={comment}
+          onChangeText={(text) => {
+            setComment(text);
+            if (error) setError(null);
+          }}
+          placeholder="Optional comment"
+          placeholderTextColor={Colors.textMuted}
+          style={styles.commentInput}
+          editable={!complete && !busy}
+          multiline
+          numberOfLines={3}
+        />
+        <FormErrorText error={error} />
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <PrimaryButton title="Submit Rating" onPress={submit} />
+        <PrimaryButton
+          title={t('rating.submit')}
+          onPress={() => void submit()}
+          disabled={complete || busy}
+          loading={busy}
+        />
+        <PrimaryButton
+          title="Skip"
+          variant="outline"
+          onPress={onSkip}
+          disabled={complete || busy}
+          style={styles.skipBtn}
+        />
       </View>
+
+      {complete ? (
+        <View style={styles.celebrateOverlay} pointerEvents="none">
+          <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+            <Ionicons name="checkmark-circle" size={96} color={Colors.primary} />
+          </Animated.View>
+        </View>
+      ) : null}
+
+      <SuccessToast
+        visible={complete}
+        message="Trip Completed Successfully"
+        durationMs={AnimDuration.tripCompleteToastMs}
+        onDismiss={onToastDismiss}
+      />
     </View>
   );
 }
@@ -101,26 +239,44 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
-  stars: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xl },
+  starsWrap: {
+    marginTop: Spacing.xl,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  starsWrapError: { borderColor: 'transparent' },
+  stars: { flexDirection: 'row', gap: Spacing.sm },
   tagLabel: {
     alignSelf: 'flex-start',
     marginTop: Spacing.xl,
     fontSize: 14,
-    color: '#64748B',
+    color: Colors.textSecondary,
     marginBottom: Spacing.sm,
     fontWeight: '600',
   },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
-  chip: {
+  loadText: { color: Colors.textSecondary, fontSize: 13, marginTop: Spacing.sm },
+  commentInput: {
+    marginTop: Spacing.lg,
+    width: '100%',
+    minHeight: 88,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.full,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.background,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    color: Colors.text,
+    textAlignVertical: 'top',
+    backgroundColor: Colors.surfaceElevated,
   },
-  chipOn: { borderColor: Colors.primary, backgroundColor: Colors.primarySoft },
-  chipText: { fontSize: 13, color: Colors.text, fontWeight: '600' },
-  chipTextOn: { color: Colors.primaryDark },
-  footer: { paddingHorizontal: Spacing.lg },
+  footer: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
+  skipBtn: { marginTop: Spacing.xs },
+  celebrateOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.celebrateScrim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 40,
+  },
 });

@@ -1,6 +1,6 @@
 import { APP_STATE_PATH, USERS_LANGUAGE_PATH } from '@/lib/config';
 
-import { api, getApiErrorMessage } from './client';
+import { api, expectHttp200, getApiErrorMessage } from './client';
 import type { ApiEnvelope } from './types';
 import { isApiFailure } from './types';
 
@@ -10,7 +10,9 @@ import { isApiFailure } from './types';
  */
 export async function postUserLanguage(language: string): Promise<void> {
   try {
-    const { data } = await api.post<ApiEnvelope<unknown>>(USERS_LANGUAGE_PATH, { language });
+    const res = await api.post<ApiEnvelope<unknown>>(USERS_LANGUAGE_PATH, { language });
+    expectHttp200(res);
+    const { data } = res;
     if (isApiFailure(data)) {
       throw new Error(data.message ?? 'Language update failed');
     }
@@ -88,7 +90,9 @@ function normalizeAppStatePayload(raw: unknown): AppStateData {
  */
 export async function getAppState(): Promise<AppStateData> {
   try {
-    const { data } = await api.get<ApiEnvelope<unknown>>(APP_STATE_PATH);
+    const res = await api.get<ApiEnvelope<unknown>>(APP_STATE_PATH);
+    expectHttp200(res);
+    const { data } = res;
     if (isApiFailure(data)) {
       throw new Error(data.message ?? 'Could not load app state');
     }

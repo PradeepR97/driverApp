@@ -3,16 +3,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   title: string;
   showBack?: boolean;
+  onBack?: () => void;
   onHelp?: () => void;
 };
 
-export function OnboardingHeader({ title, showBack = true, onHelp }: Props) {
+export function OnboardingHeader({ title, showBack = true, onBack, onHelp }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + Spacing.sm }]}>
@@ -20,12 +23,12 @@ export function OnboardingHeader({ title, showBack = true, onHelp }: Props) {
         {showBack ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={() => router.back()}
+            accessibilityLabel={t('common.back')}
+            onPress={() => (onBack ? onBack() : router.back())}
             style={styles.iconBtn}
             hitSlop={12}
           >
-            <Ionicons name="chevron-back" size={24} color={Colors.text} />
+            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
           </Pressable>
         ) : (
           <View style={styles.iconPlaceholder} />
