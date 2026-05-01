@@ -6,5 +6,16 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ['dist/*'],
+    settings: {
+      'import/resolver': {
+        alias: {
+          map: [['@', '.']],
+          extensions: ['.js', '.jsx', '.json'],
+        },
+      },
+    },
+    rules: {
+      'import/no-unresolved': 'error',
+    },
   },
 ]);

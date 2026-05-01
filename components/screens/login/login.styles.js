@@ -1,0 +1,71 @@
+import { StyleSheet } from "react-native";
+import { Colors, Radius, Shadows, Spacing, Type } from "@/config/theme";
+export const loginStyles = StyleSheet.create({
+    screen: {
+        flex: 1,
+        backgroundColor: Colors.background,
+        paddingHorizontal: Spacing.lg,
+    },
+    back: { alignSelf: "flex-start", marginBottom: Spacing.sm },
+    hairline: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: Colors.border,
+        marginBottom: Spacing.md,
+    },
+    hero: { alignItems: "center", marginTop: Spacing.sm },
+    phoneWrap: {
+        width: 72,
+        height: 72,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.primaryMuted,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: Spacing.lg,
+        ...Shadows.floatSm,
+    },
+    title: { ...Type.h1, textAlign: "center" },
+    subtitle: {
+        marginTop: Spacing.sm,
+        fontSize: 15,
+        color: Colors.textSecondary,
+        textAlign: "center",
+    },
+    formWrap: { marginTop: Spacing.xl },
+    phoneRow: {
+        flexDirection: "row",
+        gap: Spacing.sm,
+        padding: Spacing.sm,
+        alignItems: "center",
+    },
+    cc: {
+        paddingHorizontal: Spacing.md,
+        justifyContent: "center",
+        borderRadius: Radius.sm,
+        minHeight: 48,
+        backgroundColor: Colors.surface,
+    },
+    ccText: { fontWeight: "600", color: Colors.text },
+    input: {
+        flex: 1,
+        borderWidth: 0,
+        paddingHorizontal: Spacing.md,
+        fontSize: 17,
+        color: Colors.text,
+        minHeight: 48,
+        backgroundColor: "transparent",
+    },
+    spacer: { flex: 1 },
+    bottom: { gap: Spacing.md },
+    legal: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        textAlign: "center",
+        lineHeight: 18,
+    },
+    link: {
+        color: Colors.link,
+        textDecorationLine: "underline",
+        fontWeight: "600",
+    },
+    help: { fontSize: 13, color: Colors.textSecondary, textAlign: "center" },
+});

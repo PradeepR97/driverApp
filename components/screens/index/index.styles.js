@@ -1,0 +1,65 @@
+import { StyleSheet } from "react-native";
+import { Colors, Radius, Shadows, Spacing, Type } from "@/config/theme";
+export const indexStyles = StyleSheet.create({
+    screen: {
+        flex: 1,
+        backgroundColor: Colors.background,
+        paddingHorizontal: Spacing.lg,
+    },
+    hero: { alignItems: "center", marginBottom: Spacing.lg },
+    globeWrap: {
+        width: 72,
+        height: 72,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: Spacing.md,
+        ...Shadows.floatSm,
+    },
+    title: { ...Type.h1, textAlign: "center" },
+    subtitle: {
+        marginTop: Spacing.sm,
+        fontSize: 15,
+        color: Colors.textSecondary,
+        textAlign: "center",
+        lineHeight: 22,
+    },
+    grid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        gap: Spacing.md,
+        paddingBottom: Spacing.md,
+    },
+    card: {
+        width: "47%",
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: Radius.xl,
+        padding: Spacing.md + 2,
+        backgroundColor: Colors.surfaceElevated,
+        ...Shadows.floatSm,
+    },
+    cardActive: {
+        borderColor: Colors.primary,
+        backgroundColor: Colors.primarySoft,
+    },
+    cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.96 },
+    cardCode: { fontSize: 12, fontWeight: "700", color: Colors.text },
+    cardEn: { fontSize: 16, fontWeight: "700", color: Colors.text, marginTop: 4 },
+    cardNative: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+    languageError: {
+        width: "100%",
+        marginTop: Spacing.sm,
+        alignItems: "center",
+    },
+    spacer: { flex: 1 },
+    region: {
+        textAlign: "center",
+        color: Colors.textSecondary,
+        fontSize: 13,
+        marginBottom: Spacing.sm,
+    },
+    footer: {},
+});

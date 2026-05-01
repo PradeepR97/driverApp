@@ -1,0 +1,60 @@
+import { StyleSheet } from "react-native";
+import { Colors, Radius, Shadows, Spacing, Type } from "@/config/theme";
+export const verifyOtpStyles = StyleSheet.create({
+    screen: { flex: 1, backgroundColor: Colors.background },
+    scroll: { flex: 1 },
+    back: { marginLeft: Spacing.md, marginBottom: Spacing.sm },
+    hairline: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: Colors.border,
+    },
+    body: {
+        paddingHorizontal: Spacing.xl,
+        alignItems: "center",
+        marginTop: Spacing.xl,
+        paddingBottom: Spacing.xl,
+        flexGrow: 1,
+    },
+    shieldWrap: {
+        width: 72,
+        height: 72,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.primaryMuted,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: Spacing.lg,
+        ...Shadows.floatSm,
+    },
+    title: { ...Type.h1 },
+    sub: { marginTop: Spacing.md, fontSize: 15, color: Colors.textSecondary },
+    phoneRow: {
+        flexDirection: "row",
+        marginTop: Spacing.xs,
+        alignItems: "center",
+        flexWrap: "wrap",
+        justifyContent: "center",
+    },
+    phone: { fontSize: 16, fontWeight: "700", color: Colors.text },
+    change: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: Colors.link,
+        marginLeft: 4,
+    },
+    otpWrap: { marginTop: Spacing.xl, alignSelf: "stretch" },
+    resend: { marginTop: Spacing.xl, fontSize: 14, color: Colors.textSecondary },
+    timer: { fontWeight: "800", color: Colors.text },
+    status: { marginTop: Spacing.xl, fontSize: 14, color: Colors.textSecondary },
+    info: {
+        marginTop: Spacing.sm,
+        fontSize: 13,
+        fontWeight: "600",
+        color: Colors.primary,
+    },
+    resendBtn: {
+        marginTop: Spacing.lg,
+        alignSelf: "stretch",
+        width: "100%",
+        maxWidth: 280,
+    },
+});

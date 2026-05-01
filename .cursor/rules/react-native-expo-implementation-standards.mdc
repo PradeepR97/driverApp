@@ -1,0 +1,284 @@
+---
+description: Strict React Native Expo implementation rules
+alwaysApply: true
+---
+
+You MUST strictly follow these rules when generating, modifying, or suggesting code for this React Native (Expo) project. Do not ignore any rule.
+
+==================================================
+0. CODE ANALYSIS FIRST (MANDATORY)
+==================================================
+- ALWAYS analyze the existing codebase before writing any code.
+- Understand:
+  - Folder structure
+  - Component patterns
+  - State management
+  - Map integration approach
+- Identify reusable components, hooks, and services.
+- DO NOT write or modify code before analysis is complete.
+
+==================================================
+1. CONFIRMATION BEFORE IMPLEMENTATION (MANDATORY)
+==================================================
+- BEFORE making any change:
+  - Explain what will be done
+  - Explain why it is needed
+- Provide options:
+  1. Proceed
+  2. Modify approach
+  3. Cancel
+- DO NOT implement without user approval.
+
+==================================================
+2. CONTROLLED EXECUTION
+==================================================
+- Break implementation into small steps.
+- Ask confirmation after each major step.
+- Do NOT perform large multi-file changes at once.
+
+==================================================
+3. SAFE INTEGRATION WITH EXISTING CODEBASE
+==================================================
+- Do NOT modify existing working code automatically.
+- Apply rules ONLY to:
+  - New code
+  - Explicitly approved changes
+- Do NOT:
+  - Rename existing variables/classes
+  - Move files/folders
+  - Change architecture
+UNLESS explicitly approved.
+
+==================================================
+4. NON-DESTRUCTIVE DEVELOPMENT
+==================================================
+- Ensure new changes do NOT break existing functionality.
+- Maintain backward compatibility.
+
+==================================================
+5. INCREMENTAL REFACTORING
+==================================================
+- Suggest improvements first.
+- Refactor only after approval.
+- Perform changes step-by-step.
+
+==================================================
+6. CHANGE PREVIEW (MANDATORY)
+==================================================
+- Before changes:
+  - Show what will change
+  - List impacted files
+  - Mention risk level
+
+==================================================
+7. PROJECT STRUCTURE (STRICT)
+==================================================
+src/
+  components/
+  screens/
+  hooks/
+  services/
+  utils/
+  constants/
+  navigation/
+  store/
+  theme/
+
+- Do NOT introduce unnecessary folders.
+
+==================================================
+8. COMPONENT DESIGN
+==================================================
+- Use functional components only.
+- Use React Hooks.
+- Keep components small and reusable.
+
+==================================================
+9. REUSABILITY
+==================================================
+- Extract reusable UI → components
+- Extract reusable logic → hooks/services
+
+==================================================
+10. NO DUPLICATION
+==================================================
+- NEVER duplicate logic or UI.
+- Always reuse existing code if available.
+
+==================================================
+11. NAMING (STRICT)
+==================================================
+- Use meaningful names:
+  - lat ❌ → pickupLatitude ✅
+- Components → PascalCase
+- Variables → camelCase
+
+==================================================
+12. CODE STRUCTURE
+==================================================
+- Keep code modular and clean.
+- Follow separation of concerns.
+
+==================================================
+13. NO OVER-ENGINEERING
+==================================================
+- Do NOT introduce unnecessary abstraction.
+- Keep solutions simple.
+
+==================================================
+14. COMMENTS
+==================================================
+- Only for complex logic.
+- Avoid obvious comments.
+
+==================================================
+15. STYLING
+==================================================
+- Use StyleSheet or project styling system.
+- Avoid inline styles unless necessary.
+
+==================================================
+16. PERFORMANCE
+==================================================
+- Avoid unnecessary re-renders.
+- Use memoization where needed.
+
+==================================================
+17. STATE MANAGEMENT
+==================================================
+- Follow existing state pattern.
+- Do NOT introduce new libraries.
+
+==================================================
+18. API HANDLING
+==================================================
+- APIs must be in services/.
+- No direct API calls in components.
+
+==================================================
+19. ERROR HANDLING
+==================================================
+- Use try/catch.
+- Show user-friendly errors.
+
+==================================================
+20. NAVIGATION
+==================================================
+- Follow existing navigation structure.
+
+==================================================
+21. NO HARDCODING
+==================================================
+- Use constants/.
+- Avoid hardcoded URLs/keys.
+
+==================================================
+22. CLEAN CODE
+==================================================
+- Remove unused imports.
+- No commented-out code.
+
+==================================================
+23. DEPENDENCIES
+==================================================
+- Use existing libraries.
+- Prefer Expo-compatible packages.
+
+==================================================
+24. MAP INTEGRATION (STRICT)
+==================================================
+- Use one map provider only.
+- Prefer react-native-maps (Expo compatible).
+- Do NOT mix map libraries.
+
+==================================================
+25. LOCATION HANDLING
+==================================================
+- Use Expo Location API.
+- Handle permission denied & errors.
+
+==================================================
+26. PICKUP & DROP FLOW
+==================================================
+- Separate pickup and drop logic.
+- Use reusable components:
+  - LocationSearchInput
+  - MapMarker
+
+==================================================
+27. ROUTE & DIRECTIONS
+==================================================
+- Route logic must be in services/.
+- Store:
+  - distance
+  - duration
+  - polyline
+
+==================================================
+28. MAP UI RULES
+==================================================
+- Show:
+  - Pickup marker
+  - Drop marker
+  - Driver marker
+- Optimize rendering.
+
+==================================================
+29. DRIVER TRACKING
+==================================================
+- Handle via polling or real-time updates.
+- Avoid UI flickering.
+
+==================================================
+30. REAL-TIME STATE
+==================================================
+- Use centralized state for ride + driver.
+
+==================================================
+31. ANIMATION & UX
+==================================================
+- Smooth transitions for map updates.
+
+==================================================
+32. SECURITY
+==================================================
+- Do not expose API keys.
+- Use environment variables.
+
+==================================================
+33. NO ASSUMPTIONS
+==================================================
+- Do not assume missing logic.
+- Follow existing patterns only.
+
+==================================================
+34. MODIFY > CREATE
+==================================================
+- Prefer modifying existing code when safe.
+
+==================================================
+35. UTILITY DISCIPLINE
+==================================================
+- Avoid generic names (Utils, Helper).
+- Use domain-specific naming.
+
+==================================================
+36. DATABASE/API EFFICIENCY
+==================================================
+- Avoid unnecessary API calls.
+- Optimize requests.
+
+==================================================
+37. TESTABILITY
+==================================================
+- Keep code loosely coupled.
+
+==================================================
+38. FINAL VALIDATION (MANDATORY)
+==================================================
+Before output:
+- Code analyzed
+- Confirmation taken
+- No duplication
+- Existing code untouched unless approved
+- Clean, optimized, maintainable
