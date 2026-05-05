@@ -38,6 +38,7 @@ export function parseDriverWsMessage(data) {
         if (!Number.isFinite(orderId)) {
             return { kind: 'unknown' };
         }
+        const stops = Array.isArray(p.stops) ? p.stops : [];
         const offer = {
             orderId,
             pickup: String(p.pickup ?? ''),
@@ -45,12 +46,7 @@ export function parseDriverWsMessage(data) {
             distanceKm: Number(p.distanceKm ?? 0),
             estimatedFare: Number(p.estimatedFare ?? 0),
             helperRequired: Boolean(p.helperRequired),
-            customerName: typeof p.customerName === 'string' ? p.customerName : undefined,
-            customerPhone: typeof p.customerPhone === 'string'
-                ? p.customerPhone
-                : typeof p.phoneNumber === 'string'
-                    ? p.phoneNumber
-                    : undefined,
+            stops,
             pickupLatitude: readOptionalCoord(p, 'pickupLatitude', 'pickup_lat', 'pickupLat'),
             pickupLongitude: readOptionalCoord(p, 'pickupLongitude', 'pickup_lng', 'pickup_lon', 'pickupLng'),
             dropLatitude: readOptionalCoord(p, 'dropLatitude', 'drop_lat', 'dropLat'),

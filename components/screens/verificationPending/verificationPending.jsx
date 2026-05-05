@@ -46,6 +46,21 @@ export default function VerificationInProgressScreen() {
     rejection?.redirectTo ||
     "Your Application is rejected. Please update your owner details and submit again.";
   const missingDocuments = useMemo(() => {
+    const codes = rejection?.rejectionCodes;
+    if (Array.isArray(codes) && codes.length > 0) {
+      const labelMap = {
+        OWNER_SELFIE: "Owner Photo",
+        OWNER_AADHAR: "Owner Aadhaar Card",
+        OWNER_PAN: "Owner PAN Card",
+        DRIVING_LICENSE: "Driving License",
+        RC: "RC Document",
+      };
+      const labels = codes
+        .map((c) => labelMap[c])
+        .filter(Boolean);
+      return labels.length > 0 ? labels : ["Owner Aadhaar Card"];
+    }
+    // Fallback for older responses that have no rejectionCodes.
     const reason = rejectionReason.toLowerCase();
     const docs = [];
     if (reason.includes("aadhaar") || reason.includes("adhar")) {
@@ -57,8 +72,14 @@ export default function VerificationInProgressScreen() {
     if (reason.includes("selfie") || reason.includes("photo")) {
       docs.push("Owner Photo");
     }
+    if (reason.includes("driving license") || reason.includes("license")) {
+      docs.push("Driving License");
+    }
+    if (reason.includes(" rc") || reason.startsWith("rc")) {
+      docs.push("RC Document");
+    }
     return docs.length > 0 ? docs : ["Owner Aadhaar Card"];
-  }, [rejectionReason]);
+  }, [rejection?.rejectionCodes, rejectionReason]);
   const verificationDisplayId = useMemo(
     () => rejection?.verificationId || "VF-20260501-4821",
     [rejection],

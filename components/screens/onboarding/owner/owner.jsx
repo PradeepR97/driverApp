@@ -137,7 +137,7 @@ export default function OnboardingOwnerScreen() {
         ...f,
         [key]: emptySlot(),
       }));
-      void e;
+      console.error(`[owner upload] ${key} failed`, e);
       setFormError(t("errors.try_again"));
     }
   };

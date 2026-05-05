@@ -51,9 +51,6 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
     const router = useRouter();
     const pathname = usePathname();
     const insets = useSafeAreaInsets();
-    const lastDriverRouteAnchor = useRef(null);
-    const lastRouteRefreshAtMs = useRef(0);
-    const routeCoordsRef = useRef([]);
     const bottomSafeInset = Math.max(insets.bottom, Platform.OS === "android" ? Spacing.lg : 0);
     const trip = useDriverStore((s) => s.activeTrip);
     const phase = useDriverStore((s) => s.tripPhase);
@@ -77,6 +74,9 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
     const [cancelReasonsLoading, setCancelReasonsLoading] = useState(false);
     const [selectedCancelReason, setSelectedCancelReason] = useState(null);
     const [cancelErrorToast, setCancelErrorToast] = useState(null);
+    const routeCoordsRef = useRef([]);
+    const lastDriverRouteAnchor = useRef(null);
+    const lastRouteRefreshAtMs = useRef(0);
     useEffect(() => {
         routeCoordsRef.current = routeCoords;
     }, [routeCoords]);
@@ -113,20 +113,30 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
         }
     }, [phase, pathname, router, trip]);
     useEffect(() => {
-        if (!trip)
+        if (!trip) {
+            setRouteCoords([]);
             return;
+        }
+        if (phase === "waiting_pickup" ||
+            phase === "start_otp" ||
+            phase === "unloading") {
+            setRouteCoords([]);
+            return;
+        }
+        if (phase !== "to_pickup" && phase !== "to_drop") {
+            setRouteCoords([]);
+            return;
+        }
         let cancelled = false;
         const pickup = toPoint(trip.pickupLatitude, trip.pickupLongitude);
         const drop = toPoint(trip.dropLatitude, trip.dropLongitude);
-        const clearRoute = () => {
-            if (cancelled)
-                return;
-            if (routeCoordsRef.current.length > 0) {
-                setRouteCoords([]);
-            }
-        };
+        const dest = phase === "to_pickup" ? pickup : drop;
+        if (!dest) {
+            setRouteCoords([]);
+            return;
+        }
         void (async () => {
-            const resolveCurrentPoint = async () => {
+            const resolveCurrent = async () => {
                 if (driverCoord)
                     return driverCoord;
                 const c = await getDriverCoordsOrNull();
@@ -134,47 +144,34 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
                     return null;
                 return { latitude: c.lat, longitude: c.lon };
             };
-            const currentPoint = await resolveCurrentPoint();
+            const currentPoint = await resolveCurrent();
+            if (cancelled || !currentPoint)
+                return;
             const now = Date.now();
             const markRefresh = () => {
                 lastRouteRefreshAtMs.current = Date.now();
             };
             const currentRoute = routeCoordsRef.current;
-            const routeDistance = currentPoint && currentRoute.length > 1
+            const routeDistance = currentRoute.length > 1
                 ? distanceToPolylineMeters(currentPoint, currentRoute)
                 : Number.POSITIVE_INFINITY;
             const movedAnchor = Boolean(lastDriverRouteAnchor.current &&
                 currentPoint &&
                 distanceMeters(lastDriverRouteAnchor.current, currentPoint) > 220);
-            const shouldRefresh = currentRoute.length <= 1 || routeDistance > OFF_ROUTE_THRESHOLD_METERS || movedAnchor;
+            const shouldRefresh = currentRoute.length <= 1 ||
+                routeDistance > OFF_ROUTE_THRESHOLD_METERS ||
+                movedAnchor;
             const cooldownElapsed = lastRouteRefreshAtMs.current === 0 ||
                 (now - lastRouteRefreshAtMs.current >= ROUTE_REFRESH_COOLDOWN_MS);
             const offRoute = routeDistance > OFF_ROUTE_THRESHOLD_METERS;
             const canRefresh = cooldownElapsed || currentRoute.length <= 1 || offRoute || movedAnchor;
-            if (phase === "waiting_pickup" || phase === "start_otp") {
+            if (!canRefresh || !shouldRefresh)
                 return;
-            }
-            if (phase === "to_pickup") {
-                if (!pickup || !currentPoint || !canRefresh || !shouldRefresh)
-                    return;
-                markRefresh();
-                lastDriverRouteAnchor.current = currentPoint;
-                const pts = await fetchRouteCoordinates(currentPoint, pickup);
-                if (!cancelled)
-                    setRouteCoords(pts);
-                return;
-            }
-            if (phase === "to_drop" || phase === "unloading") {
-                if (!drop || !currentPoint || !canRefresh || !shouldRefresh)
-                    return;
-                markRefresh();
-                lastDriverRouteAnchor.current = currentPoint;
-                const pts = await fetchRouteCoordinates(currentPoint, drop);
-                if (!cancelled)
-                    setRouteCoords(pts);
-                return;
-            }
-            clearRoute();
+            markRefresh();
+            lastDriverRouteAnchor.current = currentPoint;
+            const pts = await fetchRouteCoordinates(currentPoint, dest);
+            if (!cancelled)
+                setRouteCoords(pts);
         })();
         return () => {
             cancelled = true;
@@ -216,17 +213,26 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
     if (!trip) {
         return null;
     }
-    const openMaps = (address) => {
-        const q = encodeURIComponent(address);
+    const isPickupPhase = phase === "to_pickup" ||
+        phase === "waiting_pickup" ||
+        phase === "start_otp";
+    const contactName = isPickupPhase ? trip.pickupContact : trip.dropContact;
+    const contactRole = isPickupPhase ? trip.pickupRole : trip.dropRole;
+    const address = isPickupPhase ? trip.pickupAddress : trip.dropAddress;
+    const contactPhoneForPhase = isPickupPhase
+        ? trip.pickupContactPhone
+        : trip.dropContactPhone;
+    const phoneDigitsForPhase = (contactPhoneForPhase ?? "").replace(/\D/g, "");
+    const openMaps = (mapsAddress) => {
+        const q = encodeURIComponent(mapsAddress);
         Linking.openURL(`${GOOGLE_MAPS_DIRECTIONS_BASE_URL}${q}`);
     };
     const callCustomer = () => {
-        const digits = (trip.customerPhone ?? "").replace(/\D/g, "");
-        if (!digits) {
+        if (!phoneDigitsForPhase) {
             setTripError("Customer phone number is unavailable.");
             return;
         }
-        void Linking.openURL(`tel:${digits}`);
+        void Linking.openURL(`tel:${phoneDigitsForPhase}`);
     };
     const openCancelSheet = () => {
         const canCancel = phase === "to_pickup" || phase === "start_otp";
@@ -297,10 +303,6 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
         }
     };
     const strip = statusStrip();
-    const isPickupPhase = phase === "to_pickup" || phase === "start_otp";
-    const contactName = isPickupPhase ? trip.pickupContact : trip.dropContact;
-    const contactRole = isPickupPhase ? trip.pickupRole : trip.dropRole;
-    const address = isPickupPhase ? trip.pickupAddress : trip.dropAddress;
     const otpFilled = otp.every((d) => d.length === 1);
     const advance = (next) => {
         setTripError(null);
@@ -430,21 +432,26 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
     const pickupLL = toPoint(trip.pickupLatitude, trip.pickupLongitude);
     const dropLL = toPoint(trip.dropLatitude, trip.dropLongitude);
     const hidePickupDropOnOtp = phase === "start_otp";
-    const pickupMapPoint = hidePickupDropOnOtp ? null : pickupLL;
-    const dropMapPoint = hidePickupDropOnOtp ? null : dropLL;
-    const showDropOnMap = !hidePickupDropOnOtp && Boolean(dropMapPoint);
+    const showPickupOnMap = !hidePickupDropOnOtp &&
+        (phase === "to_pickup" || phase === "waiting_pickup");
+    const showDropOnMap = !hidePickupDropOnOtp &&
+        (phase === "to_drop" || phase === "unloading");
+    const pickupMapPoint = showPickupOnMap ? pickupLL : null;
+    const dropMapPoint = showDropOnMap ? dropLL : null;
     const detailBottomPadding = bottomSafeInset +
         Spacing.xl +
         (phase === "start_otp" ? Spacing.xl : 0);
     return (<View style={styles.screen}>
       <View style={styles.mapSection}>
         <View style={styles.mapFill}>
-          {Platform.OS === "web" ? (<MapGridBackground />) : (<DriverTripMapView resetToken={trip.orderId} driver={driverCoord} pickup={pickupMapPoint} drop={dropMapPoint} showDropMarker={showDropOnMap} routeCoordinates={routeCoords} followDriver mapPadding={{
+          {Platform.OS === "web" ? (<MapGridBackground />) : (<DriverTripMapView resetToken={trip.orderId} driver={driverCoord} pickup={pickupMapPoint} drop={dropMapPoint} showDropMarker={showDropOnMap} routeCoordinates={(phase === "to_pickup" || phase === "to_drop") ? routeCoords : []} followDriver mapPadding={{
                 top: insets.top + Spacing.md,
                 right: Spacing.md,
                 bottom: MAP_EDGE_BOTTOM,
                 left: Spacing.md,
-            }}/>)}
+            }} pickupCalloutDescription={trip.pickupAddress} dropCalloutDescription={trip.dropAddress} driverCalloutDescription={driverCoord
+                ? `${driverCoord.latitude.toFixed(5)}, ${driverCoord.longitude.toFixed(5)}`
+                : "Waiting for GPS…"}/>)}
         </View>
 
         <View style={styles.mapChrome} pointerEvents="box-none">
@@ -504,12 +511,12 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
             <Text style={styles.name}>{contactName}</Text>
             <Text style={styles.role}>{contactRole}</Text>
           </View>
-          <Pressable style={styles.call} onPress={callCustomer}>
+          <Pressable style={[styles.call, !phoneDigitsForPhase ? styles.callDisabled : null]} onPress={callCustomer} disabled={!phoneDigitsForPhase}>
             <Ionicons name="call" size={22} color={Colors.white}/>
           </Pressable>
         </View>
 
-        {phase !== "start_otp" ? (<LocationCard pickup={trip.pickupAddress} drop={trip.dropAddress} distanceKm={trip.tripKm} fare={trip.estimatedFare} customerName={trip.pickupContact} onCall={trip.customerPhone ? callCustomer : undefined}/>) : null}
+        {phase !== "start_otp" ? (<LocationCard pickup={trip.pickupAddress} drop={trip.dropAddress} distanceKm={typeof trip.tripKm === "number" && trip.tripKm > 0 ? trip.tripKm : null} fare={trip.estimatedFare}/>) : null}
 
         {tripError ? (<View style={styles.errorBanner}>
             <Text style={styles.errorBannerText}>{tripError}</Text>
@@ -543,7 +550,10 @@ export default function ActiveTripScreen({ expectedPhase = null }) {
             </View>
           </>) : null}
 
-        {phase === "to_drop" ? (<PrimaryButton title="Arrived at Drop" onPress={() => void onArrivedAtDrop()} loading={apiBusy} disabled={apiBusy}/>) : null}
+        {phase === "to_drop" ? (<>
+            <PrimaryButton title="Navigate with Google Maps" variant="outline" onPress={() => openMaps(address)} style={styles.navBtn}/>
+            <PrimaryButton title="Arrived at Drop" onPress={() => void onArrivedAtDrop()} loading={apiBusy} disabled={apiBusy}/>
+          </>) : null}
 
         {phase === "unloading" ? (<SwipeButton key="swipe-end-trip" label="Swipe to end trip" variant="success" resetKey={phase} onComplete={() => void onEndTrip()} disabled={apiBusy}/>) : null}
       </ScrollView>

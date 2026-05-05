@@ -110,7 +110,14 @@ export default function RootLayout() {
     const toastVariant = useAppToastStore((s) => s.variant);
     const dismissToast = useAppToastStore((s) => s.dismissToast);
     useEffect(() => {
-        void hydrateApiBaseFromStorage().then(() => setApiBaseHydrated(true));
+        void (async () => {
+            await hydrateApiBaseFromStorage();
+            await hydrateAccessToken();
+            if (getAccessToken()) {
+                setDevBackendUrlConfirmed(true);
+            }
+            setApiBaseHydrated(true);
+        })();
     }, []);
     const fontsAndI18nReady = i18nReady && fontsLoaded;
     if (!fontsAndI18nReady || !apiBaseHydrated) {
@@ -168,6 +175,7 @@ export default function RootLayout() {
                 <Stack.Screen name="ratingScreen" options={{ gestureEnabled: false }}/>
                 <Stack.Screen name="orderFareScreen" options={{ gestureEnabled: false }}/>
                 <Stack.Screen name="tripHistoryScreen"/>
+                <Stack.Screen name="tripDetailScreen"/>
               </Stack>
             </KeyboardDismissView>
             <AppToast visible={toastVisible} message={toastMessage} variant={toastVariant} onDismiss={dismissToast}/>

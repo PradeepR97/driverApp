@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { devLog } from '@/utils/devLog';
 const WebSocketCtor = WebSocket;
 const MAX_DELAY_MS = 30_000;
 const BASE_DELAY_MS = 1_000;
@@ -65,20 +66,20 @@ export function connectDriverWebSocketWithRetry(options) {
         const conn = options.getConnection();
         if (!conn) {
             if (__DEV__) {
-                console.warn('[driver-ws] connect skipped: no connection (missing access token or invalid WS URL — check EXPO_PUBLIC_API_URL / EXPO_PUBLIC_WS_URL)');
+                devLog.wsWarn('[driver-ws] connect skipped: no connection (missing access token or invalid WS URL — check EXPO_PUBLIC_API_URL / EXPO_PUBLIC_WS_URL)');
             }
             scheduleReconnect();
             return;
         }
         if (__DEV__) {
-            console.log('[driver-ws] connecting', wsUrlForLog(conn.url), `(attempt ${attempt + 1})`);
+            devLog.wsOpen(`[driver-ws] connecting ${wsUrlForLog(conn.url)} (attempt ${attempt + 1})`);
         }
         try {
             ws = openDriverWebSocket(conn.url, conn.bearerToken);
         }
         catch (e) {
             if (__DEV__) {
-                console.warn('[driver-ws] new WebSocket threw', e);
+                devLog.wsError('[driver-ws] new WebSocket threw', e);
             }
             options.handlers.onError?.();
             scheduleReconnect();
@@ -87,7 +88,7 @@ export function connectDriverWebSocketWithRetry(options) {
         const socket = ws;
         socket.onopen = () => {
             if (__DEV__) {
-                console.log('[driver-ws] open', wsUrlForLog(conn.url));
+                devLog.wsOpen(`[driver-ws ✓] open ${wsUrlForLog(conn.url)}`);
             }
             attempt = 0;
             options.handlers.onOpen?.();
@@ -95,6 +96,13 @@ export function connectDriverWebSocketWithRetry(options) {
             if (payload && socket.readyState === WebSocket.OPEN) {
                 try {
                     socket.send(payload);
+                    if (__DEV__) {
+                        let parsed;
+                        try { parsed = JSON.parse(payload); } catch { parsed = payload; }
+                        devLog.wsBox('magenta', `↑ [WS]  ${parsed?.type ?? 'CONNECT'}`, [
+                            { label: 'PAYLOAD', data: parsed?.payload ?? parsed },
+                        ]);
+                    }
                 }
                 catch {
                     /* ignore */
@@ -106,22 +114,36 @@ export function connectDriverWebSocketWithRetry(options) {
             if (!raw)
                 return;
             try {
-                options.handlers.onMessage?.(JSON.parse(raw), raw);
+                const parsed = JSON.parse(raw);
+                if (__DEV__) {
+                    devLog.wsBox('cyan', `↓ [WS]  ${parsed?.type ?? 'message'}`, [
+                        { label: 'PAYLOAD', data: parsed?.payload ?? parsed },
+                    ]);
+                }
+                options.handlers.onMessage?.(parsed, raw);
             }
             catch {
+                if (__DEV__) {
+                    devLog.wsWarn('[driver-ws ↓] message (raw, unparseable)', raw);
+                }
                 options.handlers.onMessage?.(raw, raw);
             }
         };
         socket.onerror = () => {
             if (__DEV__) {
-                console.warn('[driver-ws] error event (React Native often omits details; watch the following close code)');
+                devLog.wsError('[driver-ws] error event (React Native often omits details; watch the following close code)');
             }
             options.handlers.onError?.();
         };
         socket.onclose = (ev) => {
             if (__DEV__) {
                 const reason = ev.reason ?? '';
-                console.warn('[driver-ws] closed', 'code=', ev.code, reason ? `reason=${reason}` : '(no reason)', '— see https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code');
+                const label = `[driver-ws] closed  code=${ev.code}${reason ? `  reason=${reason}` : '  (no reason)'}`;
+                if (ev.code === 1000 || ev.code === 1001) {
+                    devLog.wsWarn(label);
+                } else {
+                    devLog.wsError(label);
+                }
             }
             ws = null;
             options.handlers.onClose?.(ev.code, ev.reason ?? '');
@@ -136,6 +158,13 @@ export function connectDriverWebSocketWithRetry(options) {
             return false;
         try {
             ws.send(text);
+            if (__DEV__) {
+                let parsed;
+                try { parsed = JSON.parse(text); } catch { parsed = text; }
+                devLog.wsBox('magenta', `↑ [WS]  ${parsed?.type ?? 'sent'}`, [
+                    { label: 'PAYLOAD', data: parsed?.payload ?? parsed },
+                ]);
+            }
             return true;
         }
         catch {

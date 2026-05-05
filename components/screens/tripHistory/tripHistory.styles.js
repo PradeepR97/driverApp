@@ -86,4 +86,47 @@ export const tripHistoryStyles = StyleSheet.create({
     payTextCash: { color: "#C2410C" },
     fareRow: { flexDirection: "row", alignItems: "center", gap: 4 },
     fare: { fontSize: 18, fontWeight: "800", color: Colors.text },
+    orderRef: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: "600",
+        color: Colors.textSecondary,
+        marginRight: Spacing.sm,
+    },
+    loaderWrap: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: Spacing.xl,
+    },
+    errorWrap: { padding: Spacing.lg, alignItems: "center", gap: Spacing.md },
+    errorText: {
+        color: Colors.danger,
+        textAlign: "center",
+        fontSize: 15,
+    },
+    retryBtn: {
+        paddingVertical: Spacing.sm,
+        paddingHorizontal: Spacing.lg,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.primary,
+    },
+    retryBtnText: {
+        color: Colors.white,
+        fontWeight: "700",
+        fontSize: 15,
+    },
+    emptyWrap: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: Spacing.xl,
+        gap: Spacing.sm,
+    },
+    emptyTitle: { ...Type.h2, fontSize: 18, textAlign: "center" },
+    emptySubtitle: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        textAlign: "center",
+    },
 });

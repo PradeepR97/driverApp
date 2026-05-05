@@ -3,6 +3,7 @@ import { attachGlobalLoaderInterceptor } from "@/api/global-loader-interceptor";
 import { getApiBaseUrl } from "@/config/apiBaseUrl";
 import { getAccessToken } from "@/lib/auth-session";
 import { useAppToastStore } from "@/lib/stores/app-toast-store";
+import { devLog } from "@/utils/devLog";
 /**
  * Log every request and response (includes JSON serialization of bodies — can noticeably slow the UI in dev).
  * - Default: on in `__DEV__`, unless `EXPO_PUBLIC_API_DEBUG=false`
@@ -15,12 +16,6 @@ const API_DEBUG = API_DEBUG_RAW === "false" || API_DEBUG_RAW === "0"
     ? false
     : (typeof __DEV__ !== "undefined" && __DEV__) || API_DEBUG_RAW === "true";
 let requestSeq = 0;
-function tokenPreview(token) {
-    if (!token || typeof token !== "string") {
-        return null;
-    }
-    return token;
-}
 function sanitizeForLog(data) {
     if (data == null)
         return data;
@@ -39,6 +34,16 @@ function sanitizeForLog(data) {
             o[key] = "***";
     }
     return o;
+}
+function sanitizeHeaders(headers) {
+    if (!headers || typeof headers !== "object") return headers;
+    const h = {};
+    for (const [k, v] of Object.entries(headers)) {
+        h[k] = k.toLowerCase() === "authorization" && typeof v === "string"
+            ? v.replace(/(Bearer\s+)\S+/, "$1***")
+            : v;
+    }
+    return h;
 }
 function summarizeForLog(data, maxLen = 900) {
     if (data == null)
@@ -60,6 +65,9 @@ function buildFullUrl(config) {
         return path;
     const p = path.startsWith("/") ? path : `/${path}`;
     return base ? `${base}${p}` : p;
+}
+function urlPathForLog(fullUrl) {
+    try { return new URL(fullUrl).pathname; } catch { return fullUrl; }
 }
 export const api = axios.create({
     baseURL: "",
@@ -109,13 +117,14 @@ api.interceptors.request.use((config) => {
     }
     if (API_DEBUG) {
         const fullUrl = buildFullUrl(config);
-        console.log(`[API → #${id}] ${(config.method ?? "GET").toUpperCase()} ${fullUrl}`, {
-            skipAuth: !!config.skipAuth,
-            hasToken: !!authToken,
-            tokenPreview: tokenPreview(authToken),
-            params: config.params,
-            body: config.data !== undefined ? sanitizeForLog(config.data) : undefined,
-        });
+        const method = (config.method ?? "GET").toUpperCase();
+        devLog.apiRequest(
+            `→ #${id}  ${method}  ${urlPathForLog(fullUrl)}`,
+            [
+                { label: 'REQUEST HEADERS', data: sanitizeHeaders(config.headers) },
+                { label: 'REQUEST BODY', data: config.data !== undefined ? sanitizeForLog(config.data) : null },
+            ]
+        );
     }
     return config;
 });
@@ -123,7 +132,13 @@ api.interceptors.response.use((response) => {
     if (API_DEBUG) {
         const meta = response.config.metadata;
         const ms = meta ? Date.now() - meta.startedAt : 0;
-        console.log(`[API ← #${meta?.id ?? "?"}] ${response.status} ${(response.config.method ?? "").toUpperCase()} ${buildFullUrl(response.config)} (${ms}ms)`, { data: summarizeForLog(response.data) });
+        const method = (response.config.method ?? "").toUpperCase();
+        devLog.apiSuccess(
+            `← #${meta?.id ?? "?"}  ${response.status}  ${method}  ${urlPathForLog(buildFullUrl(response.config))}  (${ms}ms)`,
+            [
+                { label: 'RESPONSE BODY', data: summarizeForLog(response.data) },
+            ]
+        );
     }
     return response;
 }, (error) => {
@@ -144,12 +159,15 @@ api.interceptors.response.use((response) => {
         const fullUrl = cfg
             ? buildFullUrl(cfg)
             : (error.config?.url ?? "(unknown url)");
-        console.warn(`[API × #${meta?.id ?? "?"}] ${(cfg?.method ?? "?").toUpperCase()} ${fullUrl} (${ms}ms)`, {
-            message: error.message,
-            code: error.code,
-            status: error.response?.status,
-            responseBody: summarizeForLog(error.response?.data),
-        });
+        const method = (cfg?.method ?? "?").toUpperCase();
+        const status = error.response?.status;
+        devLog.apiError(
+            `✕ #${meta?.id ?? "?"}  ${status ?? "ERR"}  ${method}  ${urlPathForLog(fullUrl)}  (${ms}ms)`,
+            [
+                { label: 'REQUEST BODY', data: cfg?.data !== undefined ? sanitizeForLog(cfg.data) : null },
+                { label: 'RESPONSE BODY', data: summarizeForLog(error.response?.data) },
+            ]
+        );
     }
     return Promise.reject(error);
 });

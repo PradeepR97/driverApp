@@ -123,6 +123,9 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
+    callDisabled: {
+        opacity: 0.45,
+    },
     metaRow: {
         flexDirection: "row",
         alignItems: "center",

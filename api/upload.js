@@ -36,7 +36,14 @@ function safeFileSegment(name) {
  * Use an IAM user limited to `s3:PutObject` on `arn:aws:s3:::YOUR_BUCKET/driver-uploads/*` only.
  */
 export async function uploadLocalImageToS3(options) {
-    const cfg = getDirectS3ClientConfig();
+    let cfg;
+    try {
+        cfg = getDirectS3ClientConfig();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('[upload] S3 config error', { context: options.logContext, message });
+        throw error;
+    }
     const prefix = cfg.objectKeyPrefix.replace(/\/$/, '');
     const purpose = (options.purpose ?? 'misc').replace(/[^a-zA-Z0-9/_-]/g, '_');
     const key = `${prefix}/${purpose}/${Date.now()}-${safeFileSegment(options.fileName)}`;

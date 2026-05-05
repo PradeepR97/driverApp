@@ -7,7 +7,9 @@ import { AnimDuration } from "@/config/animations";
 import { Colors, Spacing } from "@/config/theme";
 import { getAccessToken } from "@/lib/auth-session";
 import { mockTripFromNewOrder, useDriverStore } from "@/lib/driver-store";
+import { normalizeRouteStops, pickupStopContacts } from "@/lib/tripRouteStops";
 import { useDriverOnlineWebSocket } from "@/lib/hooks/useDriverOnlineWebSocket";
+import { stopNewOrderAlertPlayback } from "@/services/notifications/orderAlertSound";
 import { useShakeAnimation } from "@/lib/hooks/useShakeAnimation";
 import { syncAndRouteFromAppState } from "@/lib/navigation/sync-app-state";
 import { MapGridBackground } from "@/shared/MapGridBackground";
@@ -37,6 +39,81 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 import { styles } from "./home.styles";
+
+function stopContactLine(stop) {
+  if (!stop || typeof stop !== "object") {
+    return null;
+  }
+  const name = typeof stop.contactName === "string" ? stop.contactName.trim() : "";
+  const phone = typeof stop.contactPhone === "string" ? stop.contactPhone.trim() : "";
+  const bits = [];
+  if (name)
+    bits.push(name);
+  if (phone)
+    bits.push(phone);
+  return bits.length > 0 ? bits.join(" · ") : null;
+}
+
+function OfferRouteSummary({ pendingNewOrder }) {
+  const stops = normalizeRouteStops(pendingNewOrder?.stops);
+  const pickupStop = stops.find((s) => s.stopType === "PICKUP");
+  const dropStops = stops.filter((s) => s.stopType === "DROP");
+  const pu = pickupStopContacts(stops);
+  const pickupAddress = (pickupStop?.address?.trim() || pendingNewOrder?.pickup || "—");
+  const pickupContactLine = pickupStop
+    ? stopContactLine(pickupStop)
+    : [pu.name !== "Customer" ? pu.name : null, pu.phone || null]
+        .filter(Boolean)
+        .join(" · ") || null;
+  const tripKmText = `~${pendingNewOrder?.distanceKm?.toFixed(1) ?? "—"} km trip`;
+
+  return (<View style={styles.route}>
+      <View style={styles.routeRow}>
+        <View style={[styles.routeDotOuter, styles.routeDotPickup]}>
+          <View style={styles.routeDotInner} />
+        </View>
+        <View style={styles.flex1}>
+          <Text style={styles.routeLabel}>PICKUP</Text>
+          <Text style={styles.routePlace}>{pickupAddress}</Text>
+          {pickupContactLine ? (<Text style={styles.routeMeta}>{pickupContactLine}</Text>) : null}
+        </View>
+      </View>
+      <View style={styles.dotted} />
+      {dropStops.length <= 1 ? (<View style={styles.routeRow}>
+          <View style={[styles.routeDotOuter, styles.routeDotDrop]}>
+            <View style={styles.routeDotInner} />
+          </View>
+          <View style={styles.flex1}>
+            <Text style={styles.routeLabel}>DROP</Text>
+            <Text style={styles.routePlace}>
+              {pendingNewOrder?.drop ?? dropStops[0]?.address ?? "—"}
+            </Text>
+            {dropStops[0] ? (stopContactLine(dropStops[0])
+        ? (<Text style={styles.routeMeta}>{stopContactLine(dropStops[0])}</Text>)
+        : null) : null}
+            <Text style={styles.routeMeta}>{tripKmText}</Text>
+          </View>
+        </View>) : (dropStops.map((d, idx) => (<View key={d.sequenceNumber ?? idx}>
+              {idx > 0 ? <View style={styles.dotted} /> : null}
+              <View style={styles.routeRow}>
+                <View style={[styles.routeDotOuter, styles.routeDotDrop]}>
+                  <View style={styles.routeDotInner} />
+                </View>
+                <View style={styles.flex1}>
+                  <Text style={styles.routeLabel}>
+                    DROP
+                    {" "}
+                    {idx + 1}
+                  </Text>
+                  <Text style={styles.routePlace}>{d.address || "—"}</Text>
+                  {stopContactLine(d) ? (<Text style={styles.routeMeta}>{stopContactLine(d)}</Text>) : null}
+                  {idx === dropStops.length - 1 ? (<Text style={styles.routeMeta}>{tripKmText}</Text>) : null}
+                </View>
+              </View>
+            </View>)))}
+    </View>);
+}
+
 export default function HomeDashboardScreen() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -243,6 +320,7 @@ export default function HomeDashboardScreen() {
         const pending = useDriverStore.getState().pendingNewOrder;
         setShowOffer(false);
         setSearching(true);
+        stopNewOrderAlertPlayback();
         if (pending) {
           void postDeclineDriverOrder(pending.orderId)
             .catch(() => {})
@@ -281,6 +359,7 @@ export default function HomeDashboardScreen() {
     setShowOffer(false);
   };
   const goOffline = () => {
+    stopNewOrderAlertPlayback();
     setOnline(false);
     setSearching(false);
     setShowOffer(false);
@@ -288,6 +367,7 @@ export default function HomeDashboardScreen() {
   };
   const accept = async () => {
     if (!pendingNewOrder || offerBusy) return;
+    stopNewOrderAlertPlayback();
     setOfferBusy(true);
     try {
       await postAcceptDriverOrder(pendingNewOrder.orderId);
@@ -310,6 +390,7 @@ export default function HomeDashboardScreen() {
   };
   const decline = async () => {
     if (!pendingNewOrder || offerBusy) return;
+    stopNewOrderAlertPlayback();
     setOfferBusy(true);
     try {
       await postDeclineDriverOrder(pendingNewOrder.orderId);
@@ -580,39 +661,7 @@ export default function HomeDashboardScreen() {
                 </Text>
               </View>
             ) : null}
-            <View style={styles.route}>
-              <View style={styles.routeRow}>
-                <View style={[styles.routeDotOuter, styles.routeDotPickup]}>
-                  <View style={styles.routeDotInner} />
-                </View>
-                <View style={styles.flex1}>
-                  <Text style={styles.routeLabel}>PICKUP</Text>
-                  <Text style={styles.routePlace}>
-                    {pendingNewOrder?.pickup ?? "—"}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.dotted} />
-              <View style={styles.routeRow}>
-                <View style={[styles.routeDotOuter, styles.routeDotDrop]}>
-                  <View style={styles.routeDotInner} />
-                </View>
-                <View style={styles.flex1}>
-                  <Text style={styles.routeLabel}>DROP</Text>
-                  <Text style={styles.routePlace}>
-                    {pendingNewOrder?.drop ?? "—"}
-                  </Text>
-                  <Text style={styles.routeMeta}>
-                    ~{pendingNewOrder?.distanceKm?.toFixed(1) ?? "—"} km trip
-                  </Text>
-                </View>
-              </View>
-            </View>
-            {pendingNewOrder?.customerName ? (
-              <Text style={styles.customerName}>
-                Customer: {pendingNewOrder.customerName}
-              </Text>
-            ) : null}
+            <OfferRouteSummary pendingNewOrder={pendingNewOrder} />
             <View style={styles.fareBar}>
               <Text style={styles.fareLabel}>Estimated fare</Text>
               <Text style={styles.fareAmt}>
